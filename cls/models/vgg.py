@@ -42,8 +42,7 @@ class VGG(nn.Module):
         # x = self.extra_convs_2(x)
         x = self.extra_convs_3(x)
         
-        x = F.avg_pool2d(x, kernel_size=(x.size(2), x.size(3)), padding=0)
-        logit = x.view(-1, 20)  
+        logit = self.fc(x) 
         
         if label is None:
             return logit
@@ -51,6 +50,10 @@ class VGG(nn.Module):
             cam = self.cam_normalize(x.detach(), size, label)
             return logit, cam
 
+    def fc(self, x):
+        x = F.avg_pool2d(x, kernel_size=(x.size(2), x.size(3)), padding=0)
+        x = x.view(-1, 20)
+        return x
 
     def cam_normalize(self, cam, size, label):
         cam = F.relu(cam)
