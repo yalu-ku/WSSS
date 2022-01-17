@@ -1,5 +1,6 @@
 import sys
 import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 sys.path.append(os.getcwd())
 
 import numpy as np
@@ -13,7 +14,11 @@ import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.vgg import vgg16
+# from models.vgg import vgg16
+# from models.vgg_deform import vgg16
+from models.vgg_deform_v2 import vgg16
+# from models.vgg_drs import vgg16
+# from models.vgg_baseline import vgg16
 from utils.my_optim import reduce_lr
 from utils.avgMeter import AverageMeter
 from utils.LoadData import train_data_loader, valid_data_loader
@@ -118,18 +123,21 @@ def validate(current_epoch):
     val_pixel_acc = res["Pixel_Accuracy"]
     val_cls_acc = cls_acc_matrix.compute_avg_acc()
     
-    """ tensorboard visualization """
-    # for n in range(min(4, img.shape[0])):
-    #     result_vis  = output_visualize(img[n], cam[n], label[n], gt_map[n], pred_map[n])
-    # results = [image for image in result_vis]
-    result_vis  = output_visualize(img[0], cam[0], label[0], gt_map[0], pred_map[0])
-    results = [image for image in result_vis]
-        # writer.add_images('valid output %d' % (n+1), result_vis, current_epoch)
-        
-    # writer.add_scalar('valid loss', val_loss.avg, current_epoch)
-    # writer.add_scalar('valid acc', val_cls_acc, current_epoch)
-    # writer.add_scalar('valid mIoU', val_miou, current_epoch)
-    # writer.add_scalar('valid Pixel Acc', val_pixel_acc, current_epoch)
+    """wandb visualization"""
+    results = []
+    result_vis = output_visualize(img[0], cam[0], label[0], gt_map[0], pred_map[0])
+    label_num = result_vis.shape[0] - 3
+
+    for i in range(result_vis.shape[0]):
+        vis = np.transpose(result_vis[i], (1, 2, 0)) * 255
+        vis = vis.astype(np.uint8)
+        image = Image.fromarray(vis).convert('RGB')
+        results.append(image)
+
+    titles = ['image'] + [f'CAM_{i}' for i in range(1, label_num+1)] + ['pseudo-mask', 'GT']
+    wandb.log({ 
+            'Result Visualization' : [wandb.Image(image, caption=titles[i]) for i, image in enumerate(results)], 
+            })
     
     print('validating loss: %.4f' % val_loss.avg)
     print('validating acc: %.4f' % val_cls_acc)
@@ -175,9 +183,6 @@ def train(current_epoch):
         if global_counter % args.show_interval == 0:
             train_cls_acc = cls_acc_matrix.compute_avg_acc()
 
-            # writer.add_scalar('train loss', train_loss.avg, global_counter)
-            # writer.add_scalar('train acc', train_cls_acc, global_counter)
-
             print('Epoch: [{}][{}/{}]\t'
                   'LR: {:.5f}\t'
                   'ACC: {:.5f}\t'
@@ -205,11 +210,6 @@ if __name__ == '__main__':
     
     if not os.path.exists(args.save_folder):
         os.makedirs(args.save_folder)
-
-    # if not os.path.exists(args.logdir):
-    #     os.makedirs(args.logdir)
-
-    # writer = SummaryWriter(log_dir=args.logdir)
     
     train_loader = train_data_loader(args)
     val_loader = valid_data_loader(args)
@@ -238,8 +238,6 @@ if __name__ == '__main__':
                    'Val Avg Loss' : val_avg_loss,
                    'Val Acc' : val_cls_acc,
                    'Val Pixel Acc' : val_pixel_acc,   
-                   'Result Vis' : [wandb.Image(image.reshape(image.shape[1], image.shape[2], 3)) for image in result_vis], 
-                #    'Result Vis' : [wandb.Image(image) for image in result_vis], 
                 })
 
         """ save checkpoint """

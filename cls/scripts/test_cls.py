@@ -9,12 +9,14 @@ import cv2
 import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.nn.functional as F
+from PIL import Image 
 
 from models.vgg import vgg16
 from utils.decode import decode_seg_map_sequence
 from utils.LoadData import test_data_loader
 from utils.Metrics import Cls_Accuracy, RunningConfusionMatrix, IOUMetric
 from utils.decode import decode_segmap
+from utils.decode import get_palette
 
 parser = argparse.ArgumentParser(description='DRS pytorch implementation')
 parser.add_argument("--input_size", type=int, default=320)
@@ -48,6 +50,8 @@ test_loader = test_data_loader(args)
 mIOU = IOUMetric(num_classes=21)
 running_confusion_matrix = RunningConfusionMatrix(labels=range(21))
 
+palette = get_palette()
+
 
 for idx, dat in enumerate(test_loader):
     print("[%03d/%03d]" % (idx, len(test_loader)), end="\r")
@@ -70,30 +74,53 @@ for idx, dat in enumerate(test_loader):
         cam = cam[0].cpu().detach().numpy()
         localization_maps = np.maximum(localization_maps, cam)
 
-    img = img[0].cpu().detach().numpy()
-    gt_map = gt_map[0].detach().numpy()
-    sal_map = sal_map[0].detach().numpy()
+    # img = img[0].cpu().detach().numpy()
+    # gt_map = gt_map[0].detach().numpy()
+    # sal_map = sal_map[0].detach().numpy()
     
+    # """ segmentation label generation """
+    # localization_maps[localization_maps < args.alpha] = 0 # object cue
+    
+    # bg = np.zeros((1, H, W), dtype=np.float32)
+    # pred_map = np.concatenate([bg, localization_maps], axis=0)  # [21, H, W]
+    
+    # pred_map[0, :, :] = (1. - sal_map) # backgroudn cue
+    
+    # pred_map = pred_map.argmax(0)
+    # mIOU.add_batch(pred_map[None, ...], gt_map[None, ...])
+
     """ segmentation label generation """
     localization_maps[localization_maps < args.alpha] = 0 # object cue
-    
+
     bg = np.zeros((1, H, W), dtype=np.float32)
     pred_map = np.concatenate([bg, localization_maps], axis=0)  # [21, H, W]
     
     pred_map[0, :, :] = (1. - sal_map) # backgroudn cue
     
-    pred_map = pred_map.argmax(0)
-    mIOU.add_batch(pred_map[None, ...], gt_map[None, ...])
-    
-    
-""" performance """
-res = mIOU.evaluate()
+    # conflict pixels with multiple confidence values
+    bg = np.array(pred_map > 0.9, dtype=np.uint8)
+    bg = np.sum(bg, axis=0)
+    pred_map = pred_map.argmax(0).astype(np.uint8)
+    pred_map[bg > 2] = 255
 
-val_miou = res["Mean_IoU"]
-val_pixel_acc = res["Pixel_Accuracy"]
+    # pixels regarded as background but confidence saliency values 
+    bg = (sal_map == 1).astype(np.uint8) * (pred_map == 0).astype(np.uint8)
+    pred_map[bg > 0] = 255
+    
+    """ save pseudo segmentation label """
+    pred_map = Image.fromarray(pred_map)
+    pred_map.putpalette(palette)
+    pred_map.save(os.path.join('pseudo-mask', "%s.png" % img_name))
 
-print("\n=======================================")
-print("ckpt : ", args.checkpoint)
-print("val_miou : %.4f" % val_miou)
-print("val_pixel_acc : %.4f" % val_pixel_acc)
-print("=======================================\n")
+    
+# """ performance """
+# res = mIOU.evaluate()
+
+# val_miou = res["Mean_IoU"]
+# val_pixel_acc = res["Pixel_Accuracy"]
+
+# print("\n=======================================")
+# print("ckpt : ", args.checkpoint)
+# print("val_miou : %.4f" % val_miou)
+# print("val_pixel_acc : %.4f" % val_pixel_acc)
+# print("=======================================\n")

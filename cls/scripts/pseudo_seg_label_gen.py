@@ -83,7 +83,7 @@ for idx, dat in enumerate(tqdm(data_loader)):
     bg = np.zeros((1, H, W), dtype=np.float32)
     pred_map = np.concatenate([bg, localization_maps], axis=0)  # [21, H, W]
     
-    pred_map[0, :, :] = (1. - sal_map) # backgroudn cue
+    # pred_map[0, :, :] = (1. - sal_map) # backgroudn cue
     
     # conflict pixels with multiple confidence values
     bg = np.array(pred_map > 0.9, dtype=np.uint8)
@@ -98,6 +98,6 @@ for idx, dat in enumerate(tqdm(data_loader)):
     """ save pseudo segmentation label """
     pred_map = Image.fromarray(pred_map)
     pred_map.putpalette(palette)
-    pred_map.save(os.path.join(output_dir, "%s.png" % img_name))
+    pred_map.save(os.path.join('pseudo-seg', "%s.png" % img_name))
     
 print("done!")

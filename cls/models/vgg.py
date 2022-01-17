@@ -11,7 +11,7 @@ model_urls = {'vgg16': 'https://download.pytorch.org/models/vgg16-397923af.pth'}
 
     
 class VGG(nn.Module):
-    def __init__(self, features, num_classes=1000, init_weights=True):
+    def __init__(self, features, num_classes=20, init_weights=True):
         
         super(VGG, self).__init__()
         self.features = features
@@ -30,6 +30,8 @@ class VGG(nn.Module):
             nn.Conv2d(512,20,kernel_size=1)            
         )
 
+        # self.fc8 = nn.Conv2d(512, num_classes, 1, bias=False)
+
         if init_weights:
             self._initialize_weights()
 
@@ -43,6 +45,7 @@ class VGG(nn.Module):
         x = self.extra_convs_3(x)
         
         logit = self.fc(x) 
+        print(logit)
         
         if label is None:
             return logit
@@ -62,7 +65,7 @@ class VGG(nn.Module):
         cam = cam * label[:, :, None, None] # clean
 
         return cam
-    
+
     def _initialize_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -135,6 +138,3 @@ def vgg16(pretrained=True, delta=0):
 if __name__ == '__main__':
     model = vgg16(pretrained=True)
     print(model)
-    input = torch.randn(2, 3, 321, 321)
-    out = model(input)
-    model.get_parameter_groups()

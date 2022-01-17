@@ -5,6 +5,15 @@ import os
 
 from utils.decode import decode_seg_map_sequence
 
+
+def load_img_id_list(img_id_file):
+    return open(img_id_file).read().splitlines()
+
+
+def load_img_label_list_from_npy(img_name_list, dataset):
+    cls_labels_dict = np.load(f'/home/junehyoung/code/wsss_baseline/voc2012_list/cls_labels.npy', allow_pickle=True).item()
+    return [cls_labels_dict[img_name] for img_name in img_name_list]
+
 def output_visualize(image, cam, label, gt_map, pred_map):
     
     image = np.transpose(image.clone().cpu().detach().numpy(), (1,2,0))  # H, W, C
@@ -21,11 +30,9 @@ def output_visualize(image, cam, label, gt_map, pred_map):
     """ visualize selected CAM outputs """
     label = label.clone().cpu().detach().numpy()
     label = np.nonzero(label)[0]
-    print(np.nonzero(label), label)
 
-    selected_cam_image = np.zeros((len(label)+3, 3, size, size), dtype=np.uint8) # (label, 3, 320, 320)
+    selected_cam_image = np.zeros((len(label)+3, 3, size, size), dtype=np.uint8) # ((image, cam1, cam2, .., pseudo, gt), 3, 320, 320)
     selected_cam_image[0] = image
-    print(selected_cam_image.shape)
     
     for n, i in enumerate(label):
         cam_img = cam[:, :, i] # H, W

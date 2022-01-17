@@ -256,3 +256,18 @@ def crf_inference(img, probs, t=10, scale_factor=1, labels=21):
     Q = d.inference(t)
 
     return np.array(Q).reshape((n_labels, h, w))
+
+class Normalize:
+    def __init__(self, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, img):
+        img_arr = np.asarray(img)
+        normalized_img = np.empty_like(img_arr, np.float32)
+
+        normalized_img[..., 0] = (img_arr[..., 0] / 255. - self.mean[0]) / self.std[0]
+        normalized_img[..., 1] = (img_arr[..., 1] / 255. - self.mean[1]) / self.std[1]
+        normalized_img[..., 2] = (img_arr[..., 2] / 255. - self.mean[2]) / self.std[2]
+
+        return normalized_img

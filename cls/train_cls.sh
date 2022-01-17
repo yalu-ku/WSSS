@@ -1,7 +1,7 @@
 #!/bin/sh
-EXP_NAME=baseline_on_test3
+EXP_NAME=deformv2_baseline
 
-CUDA_VISIBLE_DEVICES=2,3 python scripts/train_cls.py \
+CUDA_VISIBLE_DEVICES=2 python scripts/train_cls.py \
     --img_dir=/HDD/dataset/VOC2012/ \
     --train_list=/home/junehyoung/code/wsss_baseline/voc2012_list/train_aug_cls.txt \
     --test_list=/home/junehyoung/code/wsss_baseline/voc2012_list/train_cls.txt \
@@ -10,4 +10,4 @@ CUDA_VISIBLE_DEVICES=2,3 python scripts/train_cls.py \
     --decay_points='5,10' \
     --save_folder=checkpoints/${EXP_NAME} \
     --show_interval=50 \
-    --wandb_name=baseline_on_test3
+    --wandb_name=${EXP_NAME} 
