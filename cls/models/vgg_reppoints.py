@@ -19,135 +19,10 @@ from torch.nn.modules.utils import _pair
 from typing import Optional, Tuple
 from torchvision.extension import _assert_has_ops
 
+# from reppoints_utils import PointGenerator
+from models.deformable_conv import DeformConv2d
+
 model_urls = {'vgg16': 'https://download.pytorch.org/models/vgg16-397923af.pth'}
-
-def deform_conv2d(
-    input: Tensor,
-    offset: Tensor,
-    weight: Tensor,
-    bias: Optional[Tensor] = None,
-    stride: Tuple[int, int] = (1, 1),
-    padding: Tuple[int, int] = (0, 0),
-    dilation: Tuple[int, int] = (1, 1),
-    mask: Optional[Tensor] = None,
-) -> Tensor:
-
-    _assert_has_ops()
-    out_channels = weight.shape[0]
-
-    use_mask = mask is not None
-
-    if mask is None:
-        mask = torch.zeros((input.shape[0], 0), device=input.device, dtype=input.dtype)
-
-    if bias is None:
-        bias = torch.zeros(out_channels, device=input.device, dtype=input.dtype)
-
-    stride_h, stride_w = _pair(stride)
-    pad_h, pad_w = _pair(padding)
-    dil_h, dil_w = _pair(dilation)
-    weights_h, weights_w = weight.shape[-2:]
-    _, n_in_channels, in_h, in_w = input.shape
-
-    n_offset_grps = offset.shape[1] // (2 * weights_h * weights_w)
-    n_weight_grps = n_in_channels // weight.shape[1]
-
-    if n_offset_grps == 0:
-        raise RuntimeError(
-            "the shape of the offset tensor at dimension 1 is not valid. It should "
-            "be a multiple of 2 * weight.size[2] * weight.size[3].\n"
-            "Got offset.shape[1]={}, while 2 * weight.size[2] * weight.size[3]={}".format(
-                offset.shape[1], 2 * weights_h * weights_w))
-
-    return torch.ops.torchvision.deform_conv2d(
-        input,
-        weight,
-        offset,
-        mask,
-        bias,
-        stride_h, stride_w,
-        pad_h, pad_w,
-        dil_h, dil_w,
-        n_weight_grps,
-        n_offset_grps,
-        use_mask,)
-
-
-class DeformConv2d(nn.Module):
-    """
-    See :func:`deform_conv2d`.
-    """
-
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: int,
-        stride: int = 1,
-        padding: int = 0,
-        dilation: int = 1,
-        groups: int = 1,
-        bias: bool = True,
-    ):
-        super(DeformConv2d, self).__init__()
-
-        if in_channels % groups != 0:
-            raise ValueError('in_channels must be divisible by groups')
-        if out_channels % groups != 0:
-            raise ValueError('out_channels must be divisible by groups')
-
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.kernel_size = _pair(kernel_size)
-        self.stride = _pair(stride)
-        self.padding = _pair(padding)
-        self.dilation = _pair(dilation)
-        self.groups = groups
-
-        self.weight = Parameter(torch.empty(out_channels, in_channels // groups,
-                                            self.kernel_size[0], self.kernel_size[1]))
-
-        if bias:
-            self.bias = Parameter(torch.empty(out_channels))
-        else:
-            self.register_parameter('bias', None)
-
-        self.reset_parameters()
-
-    def reset_parameters(self) -> None:
-        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
-
-        if self.bias is not None:
-            fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
-            bound = 1 / math.sqrt(fan_in)
-            init.uniform_(self.bias, -bound, bound)
-
-    def forward(self, input: Tensor, offset: Tensor, mask: Tensor = None) -> Tensor:
-        """
-        Args:
-            input (Tensor[batch_size, in_channels, in_height, in_width]): input tensor
-            offset (Tensor[batch_size, 2 * offset_groups * kernel_height * kernel_width,
-                out_height, out_width]): offsets to be applied for each position in the
-                convolution kernel.
-            mask (Tensor[batch_size, offset_groups * kernel_height * kernel_width,
-                out_height, out_width]): masks to be applied for each position in the
-                convolution kernel.
-        """
-        return deform_conv2d(input, offset, self.weight, self.bias, stride=self.stride,
-                             padding=self.padding, dilation=self.dilation, mask=mask)
-
-    def __repr__(self) -> str:
-        s = self.__class__.__name__ + '('
-        s += '{in_channels}'
-        s += ', {out_channels}'
-        s += ', kernel_size={kernel_size}'
-        s += ', stride={stride}'
-        s += ', padding={padding}' if self.padding != (0, 0) else ''
-        s += ', dilation={dilation}' if self.dilation != (1, 1) else ''
-        s += ', groups={groups}' if self.groups != 1 else ''
-        s += ', bias=False' if self.bias is None else ''
-        s += ')'
-        return s.format(**self.__dict__)
 
 class VGG(nn.Module):
 
@@ -258,14 +133,16 @@ class VGG(nn.Module):
         x = self.layer5_conv3(x1)
 
         init_offset = self.extra_offset_conv1(x) # 1x1, 18
-        offset1 = (1 - 0.1) * init_offset.detach() + 0.1 * init_offset
-        offset1 = (offset1 - self.dcn_base_offset).float()
+        init_offset_detached = init_offset.detach()
+        offset1 = (1 - 0.1) * init_offset_detached + 0.1 * init_offset
+        offset1 = (offset1 - self.dcn_base_offset.to(offset1.device)).float()
+        
 
         deform = self.extra_deform_conv1(x1, offset1) # 3x3 512 
         deform = self.activation(deform)
         offset2 = self.extra_offset_conv2(deform) # 1x1, 18
 
-        reppoints2 = init_offset.detach() + offset2     
+        reppoints2 = init_offset_detached + offset2     
 
         # extra layer
         x = self.extra_conv4(x)
@@ -290,9 +167,6 @@ class VGG(nn.Module):
         cam = cam * label[:, :, None, None] # clean
 
         return cam
-
-    def convert(self, x):
-        return x 
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -363,9 +237,67 @@ def vgg16(pretrained=True, delta=0):
     return model
 
 
-if __name__ == '__main__':
-    model = vgg16(pretrained=True)
-    input = torch.randn(2, 3, 256, 256)
-    logit, reppoints = model(input)
+# if __name__ == '__main__':
+#     from reppoints_utils import (PointGenerator, get_points, offset_to_pts,
+#                                 points2bbox)
 
-    print(logit.shape, reppoints.shape)
+#     # model = vgg16(pretrained=True)
+#     # input = torch.randn(1, 3, 320, 320)
+#     # logit, reppoints = model(input)
+#     # print(reppoints.shape)
+
+#     # # ========================RepPoints============================
+
+#     # # hyperparameters 
+#     # featmap_sizes = [reppoints.shape[-2:]] # (32, 32)
+#     # img_num = reppoints.shape[0] # 1 
+#     # point_strides = [4]
+#     # point_generators = [PointGenerator() for _ in point_strides]
+#     # num_points = 9
+#     # transform_method = "minmax"
+#     # moment_transfer = nn.Parameter(data=torch.zeros(2), requires_grad=True)
+#     # moment_mul = 0.01
+
+#     # center_list = get_points(featmap_sizes, img_num, point_strides, point_generators)
+#     # pts_coordinate_preds_init = offset_to_pts(center_list, [reppoints], point_strides, num_points)
+
+#     # bbox_pred_init = points2bbox(
+#     #         pts_coordinate_preds_init[0].reshape(-1, 2 * 9), 
+#     #         y_first=False, transform_method=transform_method)
+#     # print(bbox_pred_init.shape)
+#     # ==============================================================
+#     import sys
+#     sys.path.append(os.getcwd())
+#     from utils.transforms import transforms 
+#     from PIL import Image 
+    
+#     mean_vals = [0.485, 0.456, 0.406]
+#     std_vals = [0.229, 0.224, 0.225]
+
+#     img_name = "/home/junehyoung/code/wsss_baseline/cls/figure/dog.png"
+    
+#     tsfm_train = transforms.Compose([transforms.Resize(384),  
+#                                      transforms.RandomHorizontalFlip(),
+#                                      transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1),
+#                                      transforms.RandomCrop(320),
+#                                      transforms.ToTensor(),
+#                                      transforms.Normalize(mean_vals, std_vals),
+#                                      ])
+#     model = vgg16(pretrained=True)
+#     img = Image.open(img_name).convert('RGB')
+#     logit, reppoints = model(input)
+
+#     featmap_sizes = [reppoints.shape[-2:]] # (32, 32)
+#     img_num = reppoints.shape[0] # 1 
+#     point_strides = [4]
+#     point_generators = [PointGenerator() for _ in point_strides]
+#     num_points = 9
+#     transform_method = "minmax"
+
+#     center_list = get_points(featmap_sizes, img_num, point_strides, point_generators)
+#     pts_coordinate_preds_init = offset_to_pts(center_list, [reppoints], point_strides, num_points)
+
+#     bbox_pred_init = points2bbox(
+#             pts_coordinate_preds_init[0].reshape(-1, 2 * 9), 
+#             y_first=False, transform_method=transform_method)
+#     print(bbox_pred_init.shape)
