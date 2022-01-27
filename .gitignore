@@ -154,3 +154,4 @@ cython_debug/
 /cls/wandb/
 /cls/checkpoints/
 /cls/results/
+/cls/figure/
