@@ -21,70 +21,9 @@ import cv2
 import numpy as np
 import os
 
+# from models.deformable_conv import DeformConv2d
+
 model_urls = {'vgg16': 'https://download.pytorch.org/models/vgg16-397923af.pth'}
-
-class DeformableConv2d(nn.Module):
-
-
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 kernel_size=3,
-                 stride=1,
-                 padding=1,
-                 bias=False):
-
-        super(DeformableConv2d, self).__init__()
-        
-        assert type(kernel_size) == tuple or type(kernel_size) == int
-
-        kernel_size = kernel_size if type(kernel_size) == tuple else (kernel_size, kernel_size)
-        self.stride = stride if type(stride) == tuple else (stride, stride)
-        self.padding = padding
-        
-        self.offset_conv = nn.Conv2d(in_channels, 
-                                     2 * kernel_size[0] * kernel_size[1],
-                                     kernel_size=kernel_size, 
-                                     stride=stride,
-                                     padding=self.padding, 
-                                     bias=True)
-
-        nn.init.constant_(self.offset_conv.weight, 0.)
-        # nn.init.constant_(self.offset_conv.bias, 0.)
-        
-        self.modulator_conv = nn.Conv2d(in_channels, 
-                                     1 * kernel_size[0] * kernel_size[1],
-                                     kernel_size=kernel_size, 
-                                     stride=stride,
-                                     padding=self.padding, 
-                                     bias=True)
-
-        nn.init.constant_(self.modulator_conv.weight, 0.)
-        nn.init.constant_(self.modulator_conv.bias, 0.)
-        
-        self.regular_conv = nn.Conv2d(in_channels=in_channels,
-                                      out_channels=out_channels,
-                                      kernel_size=kernel_size,
-                                      stride=stride,
-                                      padding=self.padding,
-                                      bias=bias)
-
-    def forward(self, x):
-        #h, w = x.shape[2:]
-        #max_offset = max(h, w)/4.
-
-        offset = self.offset_conv(x)#.clamp(-max_offset, max_offset)
-        modulator = 2. * torch.sigmoid(self.modulator_conv(x))
-        
-        x = torchvision.ops.deform_conv2d(input=x, 
-                                          offset=offset, 
-                                          weight=self.regular_conv.weight, 
-                                          bias=self.regular_conv.bias, 
-                                          padding=self.padding,
-                                          mask=modulator,
-                                          stride=self.stride,
-                                          )
-        return x
 
 import math
 
@@ -286,12 +225,16 @@ class VGG(nn.Module):
             size = x.size()[2:] # (H, W)
 
         x = self.features(x)
+        print(x.shape)
         offset1 = self.extra_offset_conv1(x)
         x = self.extra_deform_conv1(x, offset1)
+
         offset1 = self.extra_offset_conv2(x)
         x = self.extra_deform_conv2(x, offset1)
+        print(x.shape)
         offset1 = self.extra_offset_conv3(x)
         x = self.extra_deform_conv3(x, offset1)
+        print(x.shape)
         x = self.extra_conv(x)
         
         logit = self.fc(x) 
@@ -387,3 +330,8 @@ def vgg16(pretrained=True, delta=0):
 if __name__ == '__main__':
     model = vgg16(pretrained=True)
     print(model)
+
+    input = torch.randn(1, 3, 320, 320)
+    output = model(input)
+
+    print(output.shape)
