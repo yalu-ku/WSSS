@@ -15,15 +15,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # from models.vgg import vgg16
-# from models.vgg_deform import vgg16
-from models.vgg_deform_v2 import vgg16
+from models.vgg_deform import vgg16
+# from models.vgg_deform_v2 import vgg16
 # from models.vgg_drs import vgg16
 # from models.vgg_baseline import vgg16
+# from models.vgg_drs_deform import vgg16 
+# from models.vgg_deform_midlayer import vgg16
+# from models.vgg_reppoints import vgg16
 from utils.my_optim import reduce_lr
 from utils.avgMeter import AverageMeter
 from utils.LoadData import train_data_loader, valid_data_loader
 from utils.Metrics import Cls_Accuracy, IOUMetric
-from utils.util import output_visualize
+from utils.util import output_visualize, custom_visualization
 from tqdm import trange, tqdm
 from torch.utils.tensorboard import SummaryWriter
 import wandb 
@@ -43,6 +46,9 @@ def get_arguments():
     parser.add_argument("--input_size", type=int, default=384)
     parser.add_argument("--crop_size", type=int, default=320)
     parser.add_argument("--num_classes", type=int, default=20)
+    parser.add_argument("--shuffle_val", action='store_false')
+    parser.add_argument("--custom_vis", action='store_true')
+
 
     parser.add_argument("--lr", type=float, default=0.001)
     parser.add_argument("--weight_decay", type=float, default=0.0005)
@@ -124,27 +130,30 @@ def validate(current_epoch):
     val_cls_acc = cls_acc_matrix.compute_avg_acc()
     
     """wandb visualization"""
-    results = []
-    result_vis = output_visualize(img[0], cam[0], label[0], gt_map[0], pred_map[0])
-    label_num = result_vis.shape[0] - 3
+    if args.custom_vis:
+        custom_visualization(args, valid_data_loader, model)
+    else:
+        results = []
+        result_vis = output_visualize(img[0], cam[0], label[0], gt_map[0], pred_map[0])
+        label_num = result_vis.shape[0] - 3
 
-    for i in range(result_vis.shape[0]):
-        vis = np.transpose(result_vis[i], (1, 2, 0)) * 255
-        vis = vis.astype(np.uint8)
-        image = Image.fromarray(vis).convert('RGB')
-        results.append(image)
+        for i in range(result_vis.shape[0]):
+            vis = np.transpose(result_vis[i], (1, 2, 0)) * 255
+            vis = vis.astype(np.uint8)
+            image = Image.fromarray(vis).convert('RGB')
+            results.append(image)
 
-    titles = ['image'] + [f'CAM_{i}' for i in range(1, label_num+1)] + ['pseudo-mask', 'GT']
-    wandb.log({ 
-            'Result Visualization' : [wandb.Image(image, caption=titles[i]) for i, image in enumerate(results)], 
-            })
+        titles = ['image'] + [f'CAM_{i}' for i in range(1, label_num+1)] + ['pseudo-mask', 'GT']
+        wandb.log({ 
+                'Result Visualization' : [wandb.Image(image, caption=titles[i]) for i, image in enumerate(results)], 
+                })
     
     print('validating loss: %.4f' % val_loss.avg)
     print('validating acc: %.4f' % val_cls_acc)
     print('validating mIoU: %.4f' % val_miou)
     print('validating Pixel Acc: %.4f' % val_pixel_acc)
     
-    return val_miou, val_loss.avg, val_cls_acc, val_pixel_acc, results
+    return val_miou, val_loss.avg, val_cls_acc, val_pixel_acc
     
 
 def train(current_epoch):
@@ -229,7 +238,7 @@ if __name__ == '__main__':
     for current_epoch in range(1, args.epoch+1):
         
         train_cls_acc, loss, train_avg_loss = train(current_epoch)
-        score, val_avg_loss, val_cls_acc, val_pixel_acc, result_vis = validate(current_epoch)
+        score, val_avg_loss, val_cls_acc, val_pixel_acc = validate(current_epoch)
 
         """wandb visualization"""
         wandb.log({'Train Acc' : train_cls_acc,
