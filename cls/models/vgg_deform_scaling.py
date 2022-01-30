@@ -204,17 +204,20 @@ class DeformConv2d(nn.Module):
         return s.format(**self.__dict__)
 
 class OffsetScaler(nn.Module):
-    def __init__(self, in_ch=512, out_ch=18):
+    def __init__(self, in_ch=512, out_ch=18, delta=0.8):
         super(OffsetScaler, self).__init__()
         
         self.in_ch = in_ch 
         self.out_ch = out_ch 
+        self.delta = delta 
         self.scale = nn.Sequential(
             nn.Conv2d(self.in_ch, self.out_ch, kernel_size=3),
         )
 
     def forward(self, x):
         x = self.scale(x)
+        x = torch.sigmoid(x)
+        x += self.delta 
         return x 
 
 class OffsetScaler_Learnable(nn.Module):
@@ -272,20 +275,20 @@ class VGG(nn.Module):
         x = self.features(x)
         offset1 = self.extra_offset_conv1(x)
         scaling1 = self.extra_scaling_conv1(x)
-        scaling1 = 0.85 + F.sigmoid(scaling1)
+        # scaling1 = 0.85 + F.sigmoid(scaling1)
         # print(scaling1)
         offset1 *= scaling1 
         x = self.extra_deform_conv1(x, offset1)
 
         offset2 = self.extra_offset_conv2(x)
         scaling2 = self.extra_scaling_conv2(x)
-        scaling2 = 0.85 + F.sigmoid(scaling2)
+        # scaling2 = 0.85 + F.sigmoid(scaling2)
         offset2 *= scaling2 
         x = self.extra_deform_conv2(x, offset2)
 
         offset3 = self.extra_offset_conv3(x)
         scaling3 = self.extra_scaling_conv3(x)
-        scaling3 = 0.85 + F.sigmoid(scaling3)
+        # scaling3 = 0.85 + F.sigmoid(scaling3)
         offset3 *= scaling3 
         x = self.extra_deform_conv3(x, offset3)
 
