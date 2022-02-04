@@ -15,13 +15,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # from models.vgg import vgg16
-from models.vgg_deform import vgg16
+# from models.vgg_deform import vgg16
 # from models.vgg_deform_v2 import vgg16
 # from models.vgg_drs import vgg16
 # from models.vgg_baseline import vgg16
 # from models.vgg_drs_deform import vgg16 
 # from models.vgg_deform_midlayer import vgg16
 # from models.vgg_reppoints import vgg16
+# from models.vgg_drs_deform_every import vgg16
+# from models.vgg_drs_deform_v2_every import vgg16
+# from models.vgg_deform_scaling import vgg16
+from models.vgg_deform_scaling_learnable import vgg16
+# from models.vgg_deform_v2_scaling import vgg16
+
 from utils.my_optim import reduce_lr
 from utils.avgMeter import AverageMeter
 from utils.LoadData import train_data_loader, valid_data_loader
@@ -30,12 +36,14 @@ from utils.util import output_visualize, custom_visualization
 from tqdm import trange, tqdm
 from torch.utils.tensorboard import SummaryWriter
 import wandb 
+import importlib 
 
 
 def get_arguments():
     parser = argparse.ArgumentParser(description='WSSS baseline pytorch implementation')
 
     parser.add_argument("--wandb_name", type=str, default='', help='wandb name')
+    parser.add_argument("--network", type=str, default='models.vgg', help='wandb name')
 
     parser.add_argument("--img_dir", type=str, default='', help='Directory of training images')
     parser.add_argument("--train_list", type=str, default='VOC2012_list/train_aug_cls.txt')
@@ -65,7 +73,12 @@ def get_arguments():
 
 
 def get_model(args):
-    model = vgg16(pretrained=True) 
+    if 'vgg' in args.network:
+        model = getattr(importlib.import_module(args.network), 'vgg16')(pretrained=True)
+    else:
+        model = getattr(importlib.import_module(args.network), 'resnet50')(pretrained=True)
+
+    # model = vgg16(pretrained=True) 
 
     model = torch.nn.DataParallel(model).cuda()
     param_groups = model.module.get_parameter_groups()
