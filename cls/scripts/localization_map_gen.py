@@ -8,7 +8,8 @@ import argparse
 import cv2
 import torch.nn.functional as F
 
-from models.vgg_drs import vgg16
+# from models.vgg_drs import vgg16
+from models.vgg_deform_scaling_learnable import vgg16
 from utils.decode import decode_seg_map_sequence
 from utils.LoadData import test_data_loader
 from utils.decode import decode_segmap
@@ -17,7 +18,7 @@ parser = argparse.ArgumentParser(description='DRS pytorch implementation')
 parser.add_argument("--input_size", type=int, default=320)
 parser.add_argument("--crop_size", type=int, default=320)
 parser.add_argument("--img_dir", type=str, default="/data/DB/VOC2012/")
-parser.add_argument("--test_list", type=str, default='/home/junehyoung/code/wsss_baseline/voc2012_list/train_aug_cls.txt')
+parser.add_argument("--test_list", type=str, default='/home/junehyoung/code/wsss_baseline/metadata/voc12/train_aug_cls.txt')
 parser.add_argument("--batch_size", type=int, default=1)
 parser.add_argument("--num_classes", type=int, default=20)
 parser.add_argument("--num_workers", type=int, default=2)
@@ -32,7 +33,7 @@ if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
 """ model load """
-model = vgg16(pretrained=True, delta=args.delta)
+model = vgg16(pretrained=True)
 model = model.cuda()
 model.eval()
     
