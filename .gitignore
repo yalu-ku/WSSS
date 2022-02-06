@@ -155,3 +155,5 @@ cython_debug/
 /cls/checkpoints/
 /cls/results/
 /cls/figure/
+/figure/
+note.py
