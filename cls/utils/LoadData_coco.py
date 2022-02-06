@@ -127,16 +127,16 @@ class COCODataset(Dataset):
         
         return image, self.label_list[idx], img_name 
 
-    def load_img_label_list_from_npy(self, img_name_list, dataset):
+    def load_img_label_list_from_npy(self, img_name_list):
         # cls_labels_dict = np.load(f'metadata/{dataset}/cls_labels.npy', allow_pickle=True).item()
-        cls_labels_dict = np.load(f'/home/junehyoung/code/wsss_baseline/cocolist/cls_labels.npy', allow_pickle=True).item()
-        return [cls_labels_dict[img_name] for img_name in img_name_list]
+        cls_labels_dict = np.load(f'/home/junehyoung/code/wsss_baseline/metadata/coco14/cls_labels.npy', allow_pickle=True).item()
+        return [cls_labels_dict[img_name.split('/')[-1].split('.')[0]] for img_name in img_name_list]
 
     def read_labeled_image_list(self, data_dir, data_list):
         # TODO 
-        img_dir = os.path.join(data_dir, )
-        gt_map_dir = os.path.join(data_dir, )
-        sal_map_dir = os.path.join(data_dir, )
+        img_dir = os.path.join(data_dir, 'JPEGImages')
+        gt_map_dir = os.path.join(data_dir, 'SegmentationClass')
+        sal_map_dir = os.path.join(data_dir, 'SALImages')
 
         with open(data_list, 'r') as f:
             lines = f.readlines()
