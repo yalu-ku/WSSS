@@ -45,7 +45,6 @@ class VGG(nn.Module):
         x = self.extra_convs_3(x)
         
         logit = self.fc(x) 
-        print(logit)
         
         if label is None:
             return logit

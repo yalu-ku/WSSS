@@ -225,16 +225,13 @@ class VGG(nn.Module):
             size = x.size()[2:] # (H, W)
 
         x = self.features(x)
-        print(x.shape)
         offset1 = self.extra_offset_conv1(x)
         x = self.extra_deform_conv1(x, offset1)
 
         offset1 = self.extra_offset_conv2(x)
         x = self.extra_deform_conv2(x, offset1)
-        print(x.shape)
         offset1 = self.extra_offset_conv3(x)
         x = self.extra_deform_conv3(x, offset1)
-        print(x.shape)
         x = self.extra_conv(x)
         
         logit = self.fc(x) 
