@@ -157,3 +157,4 @@ cython_debug/
 /cls/figure/
 /figure/
 note.py
+/seg/DeepLab-V2-PyTorch/data/
