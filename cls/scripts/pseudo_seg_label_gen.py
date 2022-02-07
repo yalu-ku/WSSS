@@ -9,8 +9,9 @@ from PIL import Image
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.vgg_refine import vgg16
+# from models.vgg_refine import vgg16
 #from models.vgg import vgg16
+from models.vgg_deform_scaling_learnable import vgg16
 from utils.Metrics import IOUMetric
 from utils.LoadData import test_data_loader
 from utils.decode import get_palette
@@ -25,17 +26,18 @@ parser.add_argument("--num_classes", type=int, default=20)
 parser.add_argument("--num_workers", type=int, default=2)
 parser.add_argument("--checkpoint", type=str)
 parser.add_argument("--alpha", type=float, default=0.20)
+parser.add_argument('--refine_dir', type=str, default='')
 
 args = parser.parse_args()
 print(args)
 
-output_dir = os.path.join(args.img_dir, "refined_pseudo_segmentation_labels")
+output_dir = os.path.join(args.img_dir, args.refine_dir)
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
 """ model load """
 #model = vgg16(pretrained=True, delta=args.delta)
-model = vgg16()
+model = vgg16(pretrained=True)
 model = model.cuda()
 model.eval()
     
