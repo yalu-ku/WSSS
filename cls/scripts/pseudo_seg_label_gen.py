@@ -12,6 +12,7 @@ import torch.nn.functional as F
 # from models.vgg_refine import vgg16
 #from models.vgg import vgg16
 from models.vgg_deform_scaling_learnable import vgg16
+# from models.vgg_deform import vgg16
 from utils.Metrics import IOUMetric
 from utils.LoadData import test_data_loader
 from utils.decode import get_palette
@@ -64,8 +65,8 @@ for idx, dat in enumerate(data_loader):
     for s in [256, 320, 384]:
         _img = F.interpolate(img, size=(s, s), mode='bilinear', align_corners=False)
 
-        #_, cam = model(_img, label, size=(H, W))
-        cam = model(_img, label, size=(H, W))
+        _, cam = model(_img, label, size=(H, W))
+        # cam = model(_img, label, size=(H, W))
 
         """ obtain CAMs """
         cam = cam[0].cpu().detach().numpy()
