@@ -32,6 +32,8 @@ from libs.models import *
 from libs.utils import DenseCRF, PolynomialLR, scores
 from libs.utils.decode import decode_segmap
 
+import wandb 
+
 def makedirs(dirs):
     if not os.path.exists(dirs):
         os.makedirs(dirs)
@@ -328,7 +330,7 @@ def test(config_path, model_path, cuda, log_dir):
     """
 
     # Configuration
-    CONFIG = Dict(yaml.load(config_path))
+    CONFIG = Dict(yaml.safe_load(config_path))
     device = get_device(cuda)
     torch.set_grad_enabled(False)
 
@@ -443,7 +445,7 @@ def crf(config_path, n_jobs, log_dir):
     """
 
     # Configuration
-    CONFIG = Dict(yaml.load(config_path))
+    CONFIG = Dict(yaml.safe_load(config_path))
     torch.set_grad_enabled(False)
     print("# jobs:", n_jobs)
 
