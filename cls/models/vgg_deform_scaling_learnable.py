@@ -206,19 +206,17 @@ class OffsetScaler(nn.Module):
         return scaled_offset 
 
 class OffsetScaler_Learnable(nn.Module):
-    def __init__(self, in_ch=512, out_ch=18, delta=0.7):
+    def __init__(self, in_ch=512, out_ch=18):
         super(OffsetScaler_Learnable, self).__init__()
         
         self.in_ch = in_ch 
         self.out_ch = out_ch 
-        self.delta = delta 
 
         self.offset = nn.Conv2d(self.in_ch, self.out_ch, kernel_size=3)
         self.scale = nn.Conv2d(self.in_ch, self.out_ch, kernel_size=3)
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Sequential(
-            nn.Linear(out_ch, out_ch),
-            nn.Sigmoid()
+            nn.Linear(in_ch, out_ch),
         )
 
     def forward(self, x):
@@ -226,15 +224,15 @@ class OffsetScaler_Learnable(nn.Module):
 
         offset = self.offset(x)
         scale = self.scale(x)
-        scale = F.sigmoid(scale) 
+        scale = F.hardsigmoid(scale, inplace=False) 
 
         # learnable delta 
         # TODO : 512 -> 18 
         delta_lr = self.avg_pool(x).view(b, c)
-        delta_lr = self.fc(delta_lr).view(b, c, 1, 1)
-        delta_lr = 1 - delta_lr
-        delta_lr = torch.min(self.delta, delta_lr)
-        scale += delta_lr  
+        delta_lr = self.fc(delta_lr)#.view(b, c, 1, 1)
+        delta_lr = F.hardsigmoid(delta_lr, inplace=False) 
+        delta_lr = delta_lr.view(b, self.out_ch, 1, 1).expand_as(scale)
+        scale += delta_lr
         scaled_offset = offset * scale  
 
         return scaled_offset 
@@ -245,18 +243,18 @@ class VGG(nn.Module):
         
         super(VGG, self).__init__()
         self.features = features
-        self.extra_offset_conv1 = OffsetScaler(512, 18, delta=0.8)
-        # self.extra_offset_conv1 = OffsetScaler_Learnable(512, 18, delta=0.7)
+        # self.extra_offset_conv1 = OffsetScaler(512, 18, delta=0.8)
+        self.extra_offset_conv1 = OffsetScaler_Learnable(512, 18)
         self.extra_deform_conv1 = DeformConv2d(512, 512, kernel_size=3)
         self.relu1 = nn.ReLU(True)
 
-        self.extra_offset_conv2 = OffsetScaler(512, 18, delta=0.8)
-        # self.extra_offset_conv2 = OffsetScaler_Learnable(512, 18, delta=0.7)
+        # self.extra_offset_conv2 = OffsetScaler(512, 18, delta=0.8)
+        self.extra_offset_conv2 = OffsetScaler_Learnable(512, 18)
         self.extra_deform_conv2 = DeformConv2d(512, 512, kernel_size=3)
         self.relu2 = nn.ReLU(True)
 
-        self.extra_offset_conv3 = OffsetScaler(512, 18, delta=0.8)
-        # self.extra_offset_conv3 = OffsetScaler_Learnable(512, 18, delta=0.7)
+        # self.extra_offset_conv3 = OffsetScaler(512, 18, delta=0.8)
+        self.extra_offset_conv3 = OffsetScaler_Learnable(512, 18)
         self.extra_deform_conv3 = DeformConv2d(512, 512, kernel_size=3)
         self.relu3 = nn.ReLU(True)
 
