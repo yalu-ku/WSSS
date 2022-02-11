@@ -158,3 +158,4 @@ cython_debug/
 /figure/
 note.py
 /seg/DeepLab-V2-PyTorch/data/
+/seg/DeepLab-V2-PyTorch/wandb/
