@@ -26,6 +26,8 @@ from libs.models import *
 from libs.utils import PolynomialLR
 from libs.utils.stream_metrics import StreamSegMetrics, AverageMeter
 
+import wandb 
+
 def get_argparser():
     parser = argparse.ArgumentParser()
 
@@ -37,6 +39,7 @@ def get_argparser():
     parser.add_argument("--random_seed", type=int, default=1, help="random seed (default: 1)")
     parser.add_argument("--amp", action='store_true', default=False)
     parser.add_argument("--val_interval", type=int, default=100, help="val_interval")
+    parser.add_argument("--wandb_name", type=str, help="wandb name")
     
     return parser
                         
@@ -111,7 +114,7 @@ def main():
     # Configuration
     
     with open(opts.config_path) as f:
-        CONFIG = Dict(yaml.load(f))
+        CONFIG = Dict(yaml.safe_load(f))
     
     device = get_device(opts.cuda)
     torch.backends.cudnn.benchmark = True
@@ -234,6 +237,11 @@ def main():
     set_train(model)
     best_score = 0
     end_time = time.time()
+
+    wandb.init()
+    wandb.run.name = opts.wandb_name 
+    wandb.config.update(opts)
+    wandb.watch(model)
     
     for iteration in range(1, CONFIG.SOLVER.ITER_MAX + 1):
         # Clear gradients (ready to accumulate)
@@ -314,11 +322,16 @@ def main():
             score = metrics.get_results()
             print(metrics.to_str(score))
 
+            wandb.log({'Val mIoU' : score['Mean IoU'],
+                })
+
             if score['Mean IoU'] > best_score:  # save best model
                 best_score = score['Mean IoU']
                 torch.save(
                     model.module.state_dict(), os.path.join(checkpoint_dir, "checkpoint_best.pth")
                 )
+            else:
+                print(f"Still best mIoU is {best_score}\n")
             end_time = time.time()
 
 if __name__ == "__main__":
