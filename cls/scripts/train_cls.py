@@ -5,6 +5,7 @@ sys.path.append(os.getcwd())
 
 import numpy as np
 import torch
+torch.autograd.set_detect_anomaly(True)
 import argparse
 import cv2
 import time
@@ -27,7 +28,9 @@ import torch.nn.functional as F
 # from models.vgg_deform_scaling import vgg16
 # from models.vgg_deform_scaling_learnable import vgg16
 # from models.vgg_deform_v2_scaling import vgg16
-from models.vgg_deform_scaling_learnable import vgg16
+# from models.vgg_deform_scaling_learnable import vgg16
+# from models.vgg_accel_deform import vgg16
+from models.vgg_accel_deform_v2 import vgg16
 # from models.resnet import resnet50
 # from models.vgg_coco import vgg16
 
@@ -144,6 +147,11 @@ def validate(current_epoch):
     res = mIOU.evaluate()
     val_miou = res["Mean_IoU"]
     val_pixel_acc = res["Pixel_Accuracy"]
+    recall = res["Recall"]
+    precision = res["Precision"]
+    tp = res["True Positive"]
+    tn = res["True Negative"]
+    fp = res["False Positive"]
     val_cls_acc = cls_acc_matrix.compute_avg_acc()
     
     """wandb visualization"""
@@ -170,7 +178,7 @@ def validate(current_epoch):
     print('validating mIoU: %.4f' % val_miou)
     print('validating Pixel Acc: %.4f' % val_pixel_acc)
     
-    return val_miou, val_loss.avg, val_cls_acc, val_pixel_acc
+    return val_miou, val_loss.avg, val_cls_acc, val_pixel_acc, recall, precision, tp, tn, fp 
     
 
 def train(current_epoch):
@@ -254,12 +262,17 @@ if __name__ == '__main__':
     for current_epoch in range(1, args.epoch+1):
         
         train_cls_acc, loss, train_avg_loss = train(current_epoch)
-        score, val_avg_loss, val_cls_acc, val_pixel_acc = validate(current_epoch)
+        score, val_avg_loss, val_cls_acc, val_pixel_acc, recall, precision, tp, tn, fp  = validate(current_epoch)
 
         """wandb visualization"""
-        wandb.log({'Train Acc' : train_cls_acc,
+        wandb.log({'Val mIoU' : score,
+                   'Recall' : recall,
+                   'Precision' : precision,
+                #    'True Positive' : tp,
+                #    'True Negative' : tn,
+                #    'False Postiive' : fp,
+                   'Train Acc' : train_cls_acc,
                    'Train Avg Loss' : train_avg_loss,
-                   'Val mIoU' : score,
                    'Val Avg Loss' : val_avg_loss,
                    'Val Acc' : val_cls_acc,
                    'Val Pixel Acc' : val_pixel_acc,   
