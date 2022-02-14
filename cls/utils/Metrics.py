@@ -114,16 +114,30 @@ class IOUMetric:
 
     def evaluate(self):
         acc = np.diag(self.hist).sum() / self.hist.sum()
-        acc_cls = np.diag(self.hist) / self.hist.sum(axis=1)
-        acc_cls = np.nanmean(acc_cls)
+        recall = np.diag(self.hist) / self.hist.sum(axis=1)
+        recall = np.nanmean(recall) # mean recall 
+
+        acc_cls = np.nanmean(recall)
+        precision = np.diag(self.hist) / self.hist.sum(axis=0)
+        precision = np.nanmean(precision) # mean precision 
+
+        TP = np.diag(self.hist)
+        TN = self.hist.sum(axis=1) - np.diag(self.hist)
+        FP = self.hist.sum(axis=0) - np.diag(self.hist)
+
         iu = np.diag(self.hist) / (self.hist.sum(axis=1) + self.hist.sum(axis=0) - np.diag(self.hist))
         mean_iu = np.nanmean(iu)
         freq = self.hist.sum(axis=1) / self.hist.sum()
         fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
         cls_iu = dict(zip(range(self.num_classes), iu))
-        
+
         return {
             "Pixel_Accuracy": acc,
+            "Recall" : recall,
+            "Precision" : precision,
+            "True Positive" : TP,
+            "True Negative" : TN,
+            "False Positive" : FP,
             "Mean_Accuracy": acc_cls,
             "Frequency_Weighted_IoU": fwavacc,
             "Mean_IoU": mean_iu,
