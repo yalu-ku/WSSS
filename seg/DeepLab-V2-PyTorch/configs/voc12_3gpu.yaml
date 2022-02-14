@@ -15,7 +15,7 @@ DATASET:
         TEST: test
 
 DATALOADER:
-    NUM_WORKERS: 0
+    NUM_WORKERS: 9
 
 IMAGE:
     MEAN:
@@ -35,12 +35,12 @@ MODEL:
 
 SOLVER:
     BATCH_SIZE:
-        TRAIN: 5
+        TRAIN: 15
         TEST: 1
-    ITER_MAX: 20000
+    ITER_MAX: 7500
     ITER_SIZE: 2
-    ITER_SAVE: 5000
-    ITER_TB: 100
+    ITER_SAVE: 1500
+    ITER_TB: 50
     LR_DECAY: 10
     LR: 2.5e-4
     MOMENTUM: 0.9
