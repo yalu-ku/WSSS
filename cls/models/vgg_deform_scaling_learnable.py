@@ -33,7 +33,6 @@ def deform_conv2d(
     Performs Deformable Convolution, described in
     `Deformable Convolutional Networks
     <https://arxiv.org/abs/1703.06211>`__ if :attr:`mask` is ``None``.
-
     Args:
         input (Tensor[batch_size, in_channels, in_height, in_width]): input tensor
         offset (Tensor[batch_size, 2 * offset_groups * kernel_height * kernel_width, out_height, out_width]):
@@ -47,10 +46,8 @@ def deform_conv2d(
         dilation (int or Tuple[int, int]): the spacing between kernel elements. Default: 1
         mask (Tensor[batch_size, offset_groups * kernel_height * kernel_width, out_height, out_width]):
             masks to be applied for each position in the convolution kernel. Default: None
-
     Returns:
         Tensor[batch_sz, out_channels, out_h, out_w]: result of convolution
-
     Examples::
         >>> input = torch.rand(4, 3, 10, 10)
         >>> kh, kw = 3, 3
@@ -205,6 +202,56 @@ class OffsetScaler(nn.Module):
         
         return scaled_offset 
 
+class OffsetScaler_Preserve(nn.Module):
+    def __init__(self, in_ch=512, out_ch=18, delta=0.8):
+        super(OffsetScaler_Preserve, self).__init__()
+        
+        self.in_ch = in_ch 
+        self.out_ch = out_ch 
+        self.delta = delta 
+        self.offset = nn.Conv2d(self.in_ch, self.out_ch, kernel_size=3)
+        self.scale = nn.Conv2d(self.in_ch, self.out_ch, kernel_size=3)
+
+    def forward(self, x):
+        offset = self.offset(x)
+        scale = self.scale(x)
+        scale = F.hardsigmoid(scale, inplace=False) 
+        scale += self.delta
+        scale = torch.max(torch.ones(scale.shape).cuda(), scale)
+        scaled_offset = offset * scale  
+        
+        return scaled_offset 
+
+class OffsetScaler_Smooth(nn.Module):
+    def __init__(self, in_ch=512, out_ch=18, beta=0.7, delta=0.3):
+        super(OffsetScaler_Smooth, self).__init__()
+        
+        self.in_ch = in_ch 
+        self.out_ch = out_ch 
+        self.delta = delta 
+        self.beta = beta 
+        self.offset = nn.Conv2d(self.in_ch, self.out_ch, kernel_size=3)
+        self.scale = nn.Conv2d(self.in_ch, self.out_ch, kernel_size=3)
+        self.global_max_pool = nn.AdaptiveMaxPool2d(1)
+
+    def forward(self, x):
+        offset = self.offset(x)
+        scale = self.scale(x)
+        
+        ############ Offset Smoothing ##########
+        b, c, _, _ = scale.size()
+        scale_max = self.global_max_pool(scale).view(b, c, 1, 1)
+        scale_max = scale_max.expand_as(scale)
+        control = self.delta 
+        scale = torch.min(scale, scale_max * control)
+        ########################################
+        
+        scale = F.hardsigmoid(scale, inplace=False) 
+        scale += self.beta
+        scaled_offset = offset * scale  
+        
+        return scaled_offset 
+
 class OffsetScaler_Learnable(nn.Module):
     def __init__(self, in_ch=512, out_ch=18):
         super(OffsetScaler_Learnable, self).__init__()
@@ -236,6 +283,27 @@ class OffsetScaler_Learnable(nn.Module):
         scaled_offset = offset * scale  
 
         return scaled_offset 
+
+class OffsetScaler_Log(nn.Module):
+    def __init__(self, in_ch=512, out_ch=18):
+        super(OffsetScaler_Log, self).__init__()
+        
+        self.in_ch = in_ch 
+        self.out_ch = out_ch 
+        self.offset = nn.Conv2d(self.in_ch, self.out_ch, kernel_size=3)
+        self.scale = nn.Conv2d(self.in_ch, self.out_ch, kernel_size=3)
+
+    def forward(self, x):
+        offset = self.offset(x)
+        scale = self.scale(x)
+        scale = F.hardsigmoid(scale, inplace=False) 
+        # scale = 0.8 - torch.log(1 - 0.9 * scale + 1e-6)
+        # scale = 0.3 - torch.log10(1 - 0.9 * scale + 1e-6)
+        scale = 0.3 - torch.log10(1 - 0.93 * scale + 1e-6)
+        # scale = 0.8 + torch.log(1 + 9 * scale + 1e-6)
+        scaled_offset = offset * scale  
+        
+        return scaled_offset 
         
 
 class VGG(nn.Module):
@@ -243,18 +311,27 @@ class VGG(nn.Module):
         
         super(VGG, self).__init__()
         self.features = features
-        # self.extra_offset_conv1 = OffsetScaler(512, 18, delta=0.8)
-        self.extra_offset_conv1 = OffsetScaler_Learnable(512, 18)
+        # self.extra_offset_conv1 = OffsetScaler(512, 18, delta=0.2)
+        # self.extra_offset_conv1 = OffsetScaler_Preserve(512, 18, delta=0.8)
+        # self.extra_offset_conv1 = OffsetScaler_Learnable(512, 18)
+        # self.extra_offset_conv1 = OffsetScaler_Log(512, 18)
+        self.extra_offset_conv1 = OffsetScaler_Smooth(512, 18, beta=0.3, delta=0.7)
         self.extra_deform_conv1 = DeformConv2d(512, 512, kernel_size=3)
         self.relu1 = nn.ReLU(True)
 
-        # self.extra_offset_conv2 = OffsetScaler(512, 18, delta=0.8)
-        self.extra_offset_conv2 = OffsetScaler_Learnable(512, 18)
+        # self.extra_offset_conv2 = OffsetScaler(512, 18, delta=0.2)
+        # self.extra_offset_conv2 = OffsetScaler_Preserve(512, 18, delta=0.8)
+        # self.extra_offset_conv2 = OffsetScaler_Learnable(512, 18)
+        # self.extra_offset_conv2 = OffsetScaler_Log(512, 18)
+        self.extra_offset_conv2 = OffsetScaler_Smooth(512, 18, beta=0.3, delta=0.7)
         self.extra_deform_conv2 = DeformConv2d(512, 512, kernel_size=3)
         self.relu2 = nn.ReLU(True)
 
-        # self.extra_offset_conv3 = OffsetScaler(512, 18, delta=0.8)
-        self.extra_offset_conv3 = OffsetScaler_Learnable(512, 18)
+        # self.extra_offset_conv3 = OffsetScaler(512, 18, delta=0.2)
+        # self.extra_offset_conv3 = OffsetScaler_Preserve(512, 18, delta=0.8)
+        # self.extra_offset_conv3 = OffsetScaler_Learnable(512, 18)
+        # self.extra_offset_conv3 = OffsetScaler_Log(512, 18)
+        self.extra_offset_conv3 = OffsetScaler_Smooth(512, 18, beta=0.3, delta=0.7)
         self.extra_deform_conv3 = DeformConv2d(512, 512, kernel_size=3)
         self.relu3 = nn.ReLU(True)
 
@@ -316,8 +393,48 @@ class VGG(nn.Module):
                 m.bias.data.zero_()
             elif isinstance(m, nn.Linear):
                 m.weight.data.normal_(0, 0.01)
-                m.bias.data.zero_()
+                if m.bias is not None:
+                    m.bias.data.zero_()
             elif isinstance(m, OffsetScaler):
+                # offset initialization 
+                n = m.offset.kernel_size[0] * m.offset.kernel_size[1] * m.offset.out_channels 
+                m.offset.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.offset.bias is not None:
+                    m.offset.bias.data.zero_()
+
+                # scaler initialization 
+                n = m.scale.kernel_size[0] * m.scale.kernel_size[1] * m.scale.out_channels 
+                m.scale.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.scale.bias is not None:
+                    m.scale.bias.data.zero_()
+
+            elif isinstance(m, OffsetScaler_Learnable):
+                # offset initialization 
+                n = m.offset.kernel_size[0] * m.offset.kernel_size[1] * m.offset.out_channels 
+                m.offset.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.offset.bias is not None:
+                    m.offset.bias.data.zero_()
+
+                # scaler initialization 
+                n = m.scale.kernel_size[0] * m.scale.kernel_size[1] * m.scale.out_channels 
+                m.scale.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.scale.bias is not None:
+                    m.scale.bias.data.zero_()
+
+            elif isinstance(m, OffsetScaler_Smooth):
+                # offset initialization 
+                n = m.offset.kernel_size[0] * m.offset.kernel_size[1] * m.offset.out_channels 
+                m.offset.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.offset.bias is not None:
+                    m.offset.bias.data.zero_()
+
+                # scaler initialization 
+                n = m.scale.kernel_size[0] * m.scale.kernel_size[1] * m.scale.out_channels 
+                m.scale.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.scale.bias is not None:
+                    m.scale.bias.data.zero_()
+
+            elif isinstance(m, OffsetScaler_Preserve):
                 # offset initialization 
                 n = m.offset.kernel_size[0] * m.offset.kernel_size[1] * m.offset.out_channels 
                 m.offset.weight.data.normal_(0, math.sqrt(2. / n))
