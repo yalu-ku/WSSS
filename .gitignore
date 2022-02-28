@@ -159,3 +159,4 @@ cython_debug/
 note.py
 /seg/DeepLab-V2-PyTorch/data/
 /seg/DeepLab-V2-PyTorch/wandb/
+/logs/
