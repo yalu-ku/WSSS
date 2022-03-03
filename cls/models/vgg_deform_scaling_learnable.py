@@ -297,9 +297,13 @@ class OffsetScaler_Log(nn.Module):
         offset = self.offset(x)
         scale = self.scale(x)
         scale = F.hardsigmoid(scale, inplace=False) 
+<<<<<<< HEAD
         # scale = 0.8 - torch.log(1 - 0.9 * scale + 1e-6)
         # scale = 0.3 - torch.log10(1 - 0.9 * scale + 1e-6)
         scale = 0.3 - torch.log10(1 - 0.93 * scale + 1e-6)
+=======
+        scale = 0.8 - torch.log(1 - 0.9 * scale + 1e-6)
+>>>>>>> e19c506cb3ce6fae34880bff76021eeecf5e9300
         # scale = 0.8 + torch.log(1 + 9 * scale + 1e-6)
         scaled_offset = offset * scale  
         
@@ -311,6 +315,7 @@ class VGG(nn.Module):
         
         super(VGG, self).__init__()
         self.features = features
+<<<<<<< HEAD
         # self.extra_offset_conv1 = OffsetScaler(512, 18, delta=0.2)
         # self.extra_offset_conv1 = OffsetScaler_Preserve(512, 18, delta=0.8)
         # self.extra_offset_conv1 = OffsetScaler_Learnable(512, 18)
@@ -332,6 +337,23 @@ class VGG(nn.Module):
         # self.extra_offset_conv3 = OffsetScaler_Learnable(512, 18)
         # self.extra_offset_conv3 = OffsetScaler_Log(512, 18)
         self.extra_offset_conv3 = OffsetScaler_Smooth(512, 18, beta=0.3, delta=0.7)
+=======
+        # self.extra_offset_conv1 = OffsetScaler(512, 18, delta=0.5)
+        # self.extra_offset_conv1 = OffsetScaler_Learnable(512, 18)
+        self.extra_offset_conv1 = OffsetScaler_Log(512, 18)
+        self.extra_deform_conv1 = DeformConv2d(512, 512, kernel_size=3)
+        self.relu1 = nn.ReLU(True)
+
+        # self.extra_offset_conv2 = OffsetScaler(512, 18, delta=0.6)
+        # self.extra_offset_conv2 = OffsetScaler_Learnable(512, 18)
+        self.extra_offset_conv2 = OffsetScaler_Log(512, 18)
+        self.extra_deform_conv2 = DeformConv2d(512, 512, kernel_size=3)
+        self.relu2 = nn.ReLU(True)
+
+        # self.extra_offset_conv3 = OffsetScaler(512, 18, delta=0.7)
+        # self.extra_offset_conv3 = OffsetScaler_Learnable(512, 18)
+        self.extra_offset_conv3 = OffsetScaler_Log(512, 18)
+>>>>>>> e19c506cb3ce6fae34880bff76021eeecf5e9300
         self.extra_deform_conv3 = DeformConv2d(512, 512, kernel_size=3)
         self.relu3 = nn.ReLU(True)
 
