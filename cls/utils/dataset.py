@@ -60,12 +60,13 @@ class VOCBase(Dataset):
 
             return img_name_list, img_labels, gt_map_list, sal_map_list, att_map_list
 
-        return img_name_list, img_labels, gt_map_list, sal_map_list
+        else:
+            return img_name_list, img_labels, gt_map_list, sal_map_list
 
 class VOCDataset(VOCBase):
     def __init__(self, datalist_file, input_size, root_dir, num_classes=20, transform=None, mode='train'):
         super().__init__(datalist_file, input_size, root_dir, num_classes, transform, mode)
-        self.image_list, self.label_list, self.gt_map_list, self.sal_map_list, self.att_map_list = self.read_labeled_image_list(self.root_dir, self.datalist_file, refine=False)
+        self.image_list, self.label_list, self.gt_map_list, self.sal_map_list = self.read_labeled_image_list(self.root_dir, self.datalist_file, refine=False)
 
         if self.mode == 'valid':
             self.map_transform = transforms.Compose([transforms.Resize(input_size, Image.NEAREST), transforms.From_Numpy()])
@@ -137,31 +138,29 @@ def get_dataloader(args, mode):
 
     if not args.refine:
         if mode == 'train':
-            img_train = VOCDataset(args.train_list, crop_size, root_dir=args.img_dir, num_classes=args.num_classes, 
-                            transform=tsfm_train, mode=mode)
-            voc_dataloader = DataLoader(img_train, batch_size=args.batch_size, 
-                            shuffle=True, num_workers=args.num_workers)
+            voc_dataset = VOCDataset(args.train_list, crop_size, root_dir=args.img_dir, 
+                                    num_classes=args.num_classes, transform=tsfm_train, mode=mode)
+            
         elif mode == 'valid':
-            img_test = VOCDataset(args.test_list, crop_size, root_dir=args.img_dir, num_classes=args.num_classes, 
-                            transform=tsfm_test, mode=mode)
-            voc_dataloader = DataLoader(img_test, batch_size=args.batch_size, 
-                            shuffle=args.shuffle_val, num_workers=args.num_workers)
+            voc_dataset = VOCDataset(args.test_list, crop_size, root_dir=args.img_dir, 
+                                    num_classes=args.num_classes, transform=tsfm_test, mode=mode)
         elif mode == 'test':
-            img_test = VOCDataset(args.test_list, crop_size, root_dir=args.img_dir, num_classes=args.num_classes, 
-                            transform=tsfm_test, mode=mode)
-            voc_dataloader = DataLoader(img_test, batch_size=args.batch_size, 
-                                shuffle=False, num_workers=args.num_workers)
+            voc_dataset = VOCDataset(args.test_list, crop_size, root_dir=args.img_dir, 
+                                    num_classes=args.num_classes, transform=tsfm_test, mode=mode)
         else:
             raise Exception("Not Appropriate dataset type.")
 
     elif args.refine:
         if mode == 'train':
-            img_train = VOCDataset(args.train_list, crop_size, root_dir=args.img_dir, num_classes=args.num_classes, transform=tsfm_train, mode='train')
-            voc_dataloader = DataLoader(img_train, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
+            voc_dataset = VOCDataset(args.train_list, crop_size, root_dir=args.img_dir, 
+                                    num_classes=args.num_classes, transform=tsfm_train, mode=mode)
         elif mode == 'test':
-            img_test = VOCDataset(args.test_list, crop_size, root_dir=args.img_dir, num_classes=args.num_classes, transform=tsfm_test, mode='test')
-            voc_dataloader = DataLoader(img_test, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, drop_last=False)
+            voc_dataset = VOCDataset(args.test_list, crop_size, root_dir=args.img_dir, 
+                                    num_classes=args.num_classes, transform=tsfm_test, mode=mode)
         else:
             raise Exception("Not Appropriate dataset type.")
+
+    voc_dataloader = DataLoader(voc_dataset, batch_size=args.batch_size, 
+                                shuffle=True, num_workers=args.num_workers)
 
     return voc_dataloader 
