@@ -157,8 +157,10 @@ def validate(current_epoch):
     
     print('validating loss: %.4f' % val_loss.avg)
     print('validating acc: %.4f' % val_cls_acc)
-    print('validating mIoU: %.4f' % val_miou)
     print('validating Pixel Acc: %.4f' % val_pixel_acc)
+    print('validating mIoU: %.4f' % val_miou)
+    print('validating Precision: %.4f' % precision)
+    print('validating Recall: %.4f' % recall)
     
     return val_miou, val_loss.avg, val_cls_acc, val_pixel_acc, recall, precision, tp, tn, fp 
     
@@ -274,4 +276,4 @@ if __name__ == '__main__':
             model_file = os.path.join(args.save_folder, 'best.pth')
             torch.save(state, model_file)
         else:
-            print(f'\nStill best mIoU is {best_score:.4f}%\n')
+            print(f'\nStill best mIoU is {best_score:.4f}\n')
