@@ -15,24 +15,7 @@ import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
 
-# from models.vgg import vgg16
-# from models.vgg_deform import vgg16
-# from models.vgg_deform_v2 import vgg16
-# from models.vgg_drs import vgg16
-# from models.vgg_baseline import vgg16
-# from models.vgg_drs_deform import vgg16 
-# from models.vgg_deform_midlayer import vgg16
-# from models.vgg_reppoints import vgg16
-# from models.vgg_drs_deform_every import vgg16
-# from models.vgg_drs_deform_v2_every import vgg16
-# from models.vgg_deform_scaling import vgg16
-# from models.vgg_deform_scaling_learnable import vgg16
-# from models.vgg_deform_v2_scaling import vgg16
-# from models.vgg_deform_scaling_learnable import vgg16
-# from models.vgg_accel_deform import vgg16
-from models.vgg_accel_deform_v2 import vgg16
-# from models.resnet import resnet50
-# from models.vgg_coco import vgg16
+from models.vgg_deform_scaling_learnable import vgg16
 
 from utils.my_optim import reduce_lr
 from utils.avgMeter import AverageMeter
@@ -41,7 +24,6 @@ from utils.LoadData import train_data_loader, valid_data_loader
 from utils.Metrics import Cls_Accuracy, IOUMetric
 from utils.util import output_visualize, custom_visualization
 from tqdm import trange, tqdm
-from torch.utils.tensorboard import SummaryWriter
 import wandb 
 import importlib 
 
