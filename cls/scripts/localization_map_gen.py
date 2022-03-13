@@ -17,7 +17,7 @@ def get_arguments():
     parser.add_argument("--input_size", type=int, default=320)
     parser.add_argument("--crop_size", type=int, default=320)
     parser.add_argument("--img_dir", type=str, default="/data/DB/VOC2012/")
-    parser.add_argument("--test_list", type=str, default='/home/junehyoung/code/wsss_baseline/metadata/voc12/train_aug_cls.txt')
+    parser.add_argument("--test_list", type=str, default='/home/junehyoung/code/wsss_baseline2/metadata/voc12/train_aug_cls.txt')
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--num_classes", type=int, default=20)
     parser.add_argument("--num_workers", type=int, default=2)
