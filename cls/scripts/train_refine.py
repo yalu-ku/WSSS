@@ -92,6 +92,7 @@ def validate(current_epoch):
             att_map = att_map.to('cuda', non_blocking=True)
             
             refined_map = model(img, label)
+            refined_map = refined_map[:, :-1]
             
             """ refinement loss """
             loss = criterion(refined_map, att_map)
@@ -118,6 +119,11 @@ def validate(current_epoch):
     res = mIOU.evaluate()
     val_miou = res["Mean_IoU"]
     val_pixel_acc = res["Pixel_Accuracy"]
+    recall = res["Recall"]
+    precision = res["Precision"]
+    tp = res["True Positive"]
+    tn = res["True Negative"]
+    fp = res["False Positive"]
     
     """ wandb visualization """
     if args.custom_vis:
@@ -139,10 +145,12 @@ def validate(current_epoch):
                 })
             
     print('validating loss: %.4f' % val_loss.avg)
-    print('validating mIoU: %.4f' % val_miou)
     print('validating Pixel Acc: %.4f' % val_pixel_acc)
+    print('validating mIoU: %.4f' % val_miou)
+    print('validating Precision: %.4f' % precision)
+    print('validating Recall: %.4f' % recall)
     
-    return val_miou, val_loss.avg, val_pixel_acc
+    return val_miou, val_loss.avg, val_pixel_acc, recall, precision, tp, tn, fp
 
 
 def train(current_epoch):
@@ -163,11 +171,19 @@ def train(current_epoch):
         label = label.to('cuda', non_blocking=True)
         img = img.to('cuda', non_blocking=True)
         att_map = att_map.to('cuda', non_blocking=True)
+        sal_map = sal_map.to('cuda', non_blocking=True)
 
         refined_map = model(img)
-        
+        fg_map = refined_map[:, :-1]
+        bg_map = refined_map[:, -1]
+        bg_map = F.hardsigmoid(bg_map)
+        bg_map = bg_map > 0.6 
+
         """ refinement loss """
-        loss = criterion(refined_map, att_map)
+        fg_loss = criterion(fg_map, att_map)
+        bg_loss = F.mse_loss(bg_map, sal_map)
+
+        loss = fg_loss + 0.5 * bg_loss 
 
         """ backprop """
         optimizer.zero_grad()
@@ -189,7 +205,7 @@ def train(current_epoch):
 
     args.global_counter = global_counter
 
-    return train_loss.val, train_loss.avg 
+    return train_loss.val, train_loss.avg, fg_loss, bg_loss 
     
 
                                    
@@ -228,13 +244,20 @@ if __name__ == '__main__':
     wandb.watch(model)
 
     for current_epoch in range(1, args.epoch+1):
-        loss, train_avg_loss = train(current_epoch)
-        score, val_avg_loss, val_pixel_acc = validate(current_epoch)
+        loss, train_avg_loss, fg_loss, bg_loss = train(current_epoch)
+        score, val_avg_loss, val_pixel_acc, recall, precision, tp, tn, fp = validate(current_epoch)
 
         """wandb visualization"""
         wandb.log({
-                   'Train Avg Loss' : train_avg_loss,
                    'Val mIoU' : score,
+                   'Recall' : recall,
+                   'Precision' : precision,
+                   'Foreground Loss' : fg_loss,
+                   'Background Loss' : bg_loss,
+                #    'True Positive' : tp,
+                #    'True Negative' : tn,
+                #    'False Postiive' : fp,
+                   'Train Avg Loss' : train_avg_loss,
                    'Val Avg Loss' : val_avg_loss,
                    'Val Pixel Acc' : val_pixel_acc,   
                 })
