@@ -140,7 +140,6 @@ def get_dataloader(args, mode):
         if mode == 'train':
             voc_dataset = VOCDataset(args.train_list, crop_size, root_dir=args.img_dir, 
                                     num_classes=args.num_classes, transform=tsfm_train, mode=mode)
-            
         elif mode == 'valid':
             voc_dataset = VOCDataset(args.test_list, crop_size, root_dir=args.img_dir, 
                                     num_classes=args.num_classes, transform=tsfm_test, mode=mode)
