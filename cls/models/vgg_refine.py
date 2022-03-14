@@ -57,7 +57,7 @@ class VGG(nn.Module):
         self.extra_conv1 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
         self.extra_conv2 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
         self.extra_conv3 = nn.Conv2d(512, 512, kernel_size=3, padding=1)
-        self.extra_conv4 = nn.Conv2d(512, num_classes, kernel_size=1)
+        self.extra_conv4 = nn.Conv2d(512, 21, kernel_size=1)
         
         self.activation = nn.ReLU()
         
@@ -124,7 +124,7 @@ class VGG(nn.Module):
         x = F.interpolate(x, size=size, mode='bilinear', align_corners=True)
         
         if label is not None:
-            x = x * label[:, :, None, None] # clean
+            x[:, :-1] = x[:, :-1] * label[:, :, None, None] # clean
             
         return x
 
