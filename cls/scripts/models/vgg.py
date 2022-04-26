@@ -6,6 +6,7 @@ import math
 import cv2
 import numpy as np
 import os
+from torchsummary import summary
 
 model_urls = {'vgg16': 'https://download.pytorch.org/models/vgg16-397923af.pth'}
 
@@ -58,10 +59,14 @@ class VGG(nn.Module):
         return x
 
     def cam_normalize(self, cam, size, label):
+        # print('label_size:',label.shape)
+        # print('f_cam_size:',cam.shape)
         cam = F.relu(cam)
         cam = F.interpolate(cam, size=size, mode='bilinear', align_corners=True)
         cam /= F.adaptive_max_pool2d(cam, 1) + 1e-5 # normalize 
+        # print('cam_size:',cam.shape)
         cam = cam * label[:, :, None, None] # clean
+        # print('final_cam_size:',cam.shape)
 
         return cam
 
@@ -135,5 +140,7 @@ def vgg16(pretrained=True, delta=0):
 
 
 if __name__ == '__main__':
-    model = vgg16(pretrained=True)
-    print(model)
+    model = vgg16(pretrained=True).cuda()
+    summary(model, (3, 224, 224))
+    # x = torch.randn(1, 3, 224, 224).cuda()
+    # l, c = model(x, label=x, size=(224, 224, 3))
