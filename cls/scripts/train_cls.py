@@ -1,7 +1,9 @@
 import sys
 import os
 
-from models.RepLKNet import RepLKNet
+from wsss_baseline2.cls.scripts.models.vgg import replknetwork
+
+
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 sys.path.append(os.getcwd())
 
@@ -9,13 +11,14 @@ import numpy as np
 import torch
 torch.autograd.set_detect_anomaly(True)
 import argparse
-import cv2
+# import cv2
 import time
 from PIL import Image 
 
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
+
 
 from models.vgg_deform_scaling_learnable import vgg16
 
@@ -29,7 +32,10 @@ from tqdm import trange, tqdm
 import wandb 
 import importlib 
 
+from wsss_baseline2.cls.scripts.models.vgg_v1 import *
+from models.RepLKNet import *
 
+# feature_path = '/root/wsss_baseline2/metadata/RepLKNet-31B_ImageNet-22K-to-1K_384.pth'
 def str2bool(v):
     """
     Converts string to bool type; enables command line 
@@ -50,9 +56,9 @@ def get_arguments():
     parser.add_argument("--wandb_name", type=str, default='', help='wandb name')
     # parser.add_argument("--network", type=str, default='models.vgg', help='wandb name')
 
-    parser.add_argument("--img_dir", type=str, default='', help='Directory of training images')
-    parser.add_argument("--train_list", type=str, default='/home/junehyoung/code/wsss_baseline/metadata/voc12/train_aug_cls.txt')
-    parser.add_argument("--test_list", type=str, default='/home/junehyoung/code/wsss_baseline/metadata/voc12/train_cls.txt')
+    parser.add_argument("--img_dir", type=str, default='/HDD/dataset/VOC2012', help='Directory of training images')
+    parser.add_argument("--train_list", type=str, default='../metadata/voc12/train_aug_cls.txt')
+    parser.add_argument("--test_list", type=str, default='../metadata/voc12/train_cls.txt')
     parser.add_argument('--save_folder', default='checkpoints/test', help='Location to save checkpoint models')
 
     # parser.add_argument("--batch_size", type=int, default=5)
@@ -66,7 +72,7 @@ def get_arguments():
     # parser.add_argument("--weight_decay", type=float, default=0.0005)
     parser.add_argument("--decay_points", type=str, default='5,10')
     parser.add_argument("--epoch", type=int, default=15)
-    # parser.add_argument("--num_workers", type=int, default=2)
+    parser.add_argument("--num_workers", type=int, default=2)
     parser.add_argument("--alpha", type=float, default=0.20, help='object cues for the pseudo seg map generation')
 
     parser.add_argument('--show_interval', default=50, type=int, help='interval of showing training conditions')
@@ -203,7 +209,7 @@ def get_arguments():
                         help='Enabling distributed evaluation')
     parser.add_argument('--disable_eval', type=str2bool, default=False,
                         help='Disabling evaluation during training')
-    parser.add_argument('--num_workers', default=10, type=int)
+    # parser.add_argument('--num_workers', default=10, type=int)
     parser.add_argument('--pin_mem', type=str2bool, default=True,
                         help='Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.')
 
@@ -225,18 +231,33 @@ def get_arguments():
 
 
 def get_model(args):
+    # if 'create_RepLKNet31B' in args.network:
+    #     model = getattr(importlib.import_module(args.network), 'vgg16')(pretrained=True)
+    #     print(model)
+    # else:
+    #     print('Not RepLKNet')
+        
     # if 'vgg' in args.network:
     #     model = getattr(importlib.import_module(args.network), 'vgg16')(pretrained=True)
     # else:
     #     model = getattr(importlib.import_module(args.network), 'resnet50')(pretrained=True)
 
-    model = create_RepLKNet31B(num_classes=20, small_kernel_merged=False, use_checkpoint=False)
+    model = replk(pretrained=True)
+    # model = create_RepLKNet31B(num_classes=20, small_kernel_merged=False, use_checkpoint=False)
+    # model = vgg16(pretrained=True)
+    
+    
+    # model.fc = nn.Linear()
+    # print(model)
+    
     # model = resnet50(pretrained=True)
 
     ##
     
     model = torch.nn.DataParallel(model).cuda()
-    param_groups = model.module.get_parameter_groups()
+    param_groups = RepLKNet.get_parameter_groups
+    # get_parameter_groups(param_groups)
+    print('param_groups:', param_groups)
     ## 'get_parameter_groups' error
     optimizer = optim.SGD([
         {'params': param_groups[0], 'lr': args.lr},
@@ -252,12 +273,12 @@ def get_model(args):
 
 def create_RepLKNet31B(drop_path_rate=0.3, num_classes=20, use_checkpoint=True, small_kernel_merged=False):
         return RepLKNet(large_kernel_sizes=[31, 29, 27, 13], layers=[2, 2, 18, 2], channels=[128, 256, 512, 1024], drop_path_rate=drop_path_rate, small_kernel=5, num_classes=num_classes, use_checkpoint=use_checkpoint, use_sync_bn=False, small_kernel_merged=small_kernel_merged)
-
+        ######################################################################## channels 절반식 
 
 def validate(current_epoch):
     print('\nvalidating ... ', flush=True, end='')
     
-    mIOU = IOUMetric(num_classes=20) #####################
+    mIOU = IOUMetric(num_classes=21) #####################
     cls_acc_matrix = Cls_Accuracy()
     val_loss = AverageMeter()
     
@@ -331,7 +352,7 @@ def validate(current_epoch):
     print('validating Recall: %.4f' % recall)
     
     return val_miou, val_loss.avg, val_cls_acc, val_pixel_acc, recall, precision, tp, tn, fp 
-    
+ 
 
 def train(current_epoch):
     train_loss = AverageMeter()
@@ -381,16 +402,16 @@ def train(current_epoch):
     args.global_counter = global_counter
 
     return train_cls_acc, train_loss.val, train_loss.avg
-    
+
     
 if __name__ == '__main__':
     args = get_arguments()
     
-    nGPU = torch.cuda.device_count()
-    print("start training the classifier, nGPU = %d" % nGPU)
+    # nGPU = torch.cuda.device_count()
+    # print("start training the classifier, nGPU = %d" % nGPU)
     
-    args.batch_size *= nGPU
-    args.num_workers *= nGPU
+    # args.batch_size *= nGPU
+    # args.num_workers *= nGPU
     
     print('Running parameters:\n', args)
     
@@ -405,6 +426,7 @@ if __name__ == '__main__':
 
     best_score = 0
     model, optimizer = get_model(args)
+    # print(model)
 
     # wandb 
     wandb.init()

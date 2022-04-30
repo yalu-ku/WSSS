@@ -7,15 +7,28 @@ import cv2
 import numpy as np
 import os
 from torchsummary import summary
+import numpy as np
 
-model_urls = {'vgg16': 'https://download.pytorch.org/models/vgg16-397923af.pth'}
+## model_urls 출처
+# from wsss_baseline2.cls.scripts.models.RepLKNet import PATH
 
+
+# model_urls = {'replk_pth': '/root/wsss_baseline2/metadata/RepLKNet-31B_ImageNet-22K-to-1K_384.pth'}
+# PATH = {'replk_pth':'/root/wsss_baseline2/metadata/RepLKNet-31B_ImageNet-22K-to-1K_384.pth'}
+PATH = '/root/wsss_baseline2/metadata/RepLKNet-31B_ImageNet-22K-to-1K_384.pth'
     
-class VGG(nn.Module):
-    def __init__(self, features, num_classes=20, init_weights=True):
-        
-        super(VGG, self).__init__()
+class RepLK(nn.Module): #왜 feature=none?
+    def __init__(self, features, num_classes=20, init_weights=True, pretrained=False):
+        super(RepLK,self).__init__()
         self.features = features
+        # print(features)
+        # if pretrained:
+        #     self.features = nn.Sequential(
+        #         torch.load(PATH, map_location='cuda', strict=False)
+        #     )
+        # else:
+        #     print('except..')
+        #     exit(-1)
         self.extra_convs_1 = nn.Sequential(
             nn.Conv2d(512, 512, kernel_size=3, padding=1),
             nn.ReLU(True),
@@ -25,6 +38,7 @@ class VGG(nn.Module):
         )
         
         # self.extra_convs_2 = GloRe_Unit_2D(512, 64)
+        
 
         self.extra_convs_3 = nn.Sequential(  
             nn.ReLU(True),
@@ -122,6 +136,7 @@ def make_layers(cfg, batch_norm=False):
             in_channels = v
     return nn.Sequential(*layers)
 
+##### VGG Type #####
 cfg = {
     'A': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
     'B': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
@@ -131,16 +146,32 @@ cfg = {
     }
 
 
-def vgg16(pretrained=True, delta=0):
-    model = VGG(make_layers(cfg['D1']))
-    if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['vgg16']), strict=False)
+# def vgg16(pretrained=True, delta=0):
+#     # model = Ndmodel(make_layers(cfg['D1']))
+#     model = Ndmodel(pretrained=True)
+#     # if pretrained:
+#     #     model.load_state_dict(model_zoo.load_url(model_urls['vgg16']), strict=False)
         
+#     return model
+
+def replknetwork(pretrained=True, delta=0):
+    torch.save(model.state_dict(), PATH)
+    
+    model = RepLK(make_layers(cfg['D1']))
+    if pretrained:
+        # model.load_state_dict(model_urls['replk_pth'], strict=False)
+        # model.load_state_dict(PATH['replk_pth'])        
+        model.load_state_dict(torch.load(PATH))
     return model
 
-
 if __name__ == '__main__':
-    model = vgg16(pretrained=True).cuda()
-    summary(model, (3, 224, 224))
+    # model = vgg16(pretrained=True).cuda()
+    model = replknetwork(pretrained=True).cuda()
+
+    # summary(model, (3, 224, 224))
+    print(model)
+    # print(VGG.get_parameter_groups.named_parameters)
+
+
     # x = torch.randn(1, 3, 224, 224).cuda()
     # l, c = model(x, label=x, size=(224, 224, 3))

@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-import cv2
+#import cv2
 import os
 from tqdm import tqdm
 from PIL import Image 

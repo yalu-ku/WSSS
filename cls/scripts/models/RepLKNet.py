@@ -7,18 +7,27 @@
 # https://github.com/facebookresearch/deit/
 # https://github.com/facebookresearch/dino
 # --------------------------------------------------------'
+from pyexpat import features
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
 import torch.nn.functional as F
 import torch.distributed as dist
 from timm.models.layers import DropPath
-from torchsummary import summary
+# from torchsummary import summary
 import numpy as np
-import cv2
+# import cv2
 import sys
 import os
-import utils
+
+from zmq import device
+import utils_RepLK # RepLKNet에서 가져온 .py
+
+## ImageNet-1k pretrained model (384x384, acc:84.8) 아니고 파일명 참고
+# model_url = {'RepLKNet31B': 'https://pan.baidu.com/s/1WhLaCKKv4NuKc3qMYECOIQ?pwd=lknt'}
+
+PATH = '/root/wsss_baseline2/metadata/RepLKNet-31B_ImageNet-22K-to-1K_384.pth'
+
 
 
 def get_conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias):
@@ -174,7 +183,7 @@ class RepLKBlock(nn.Module):
         self.lk_nonlinear = nn.ReLU()
         self.prelkb_bn = get_bn(in_channels)
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
-        # print('drop path:', self.drop_path)
+        print('drop path:', self.drop_path)
 
     def forward(self, x):
         out = self.prelkb_bn(x)
@@ -224,7 +233,7 @@ class RepLKNetStage(nn.Module):
 
 class RepLKNet(nn.Module):
 
-    def __init__(self, large_kernel_sizes, layers, channels, drop_path_rate, small_kernel,
+    def __init__(self,  large_kernel_sizes, layers, channels, drop_path_rate, small_kernel,
                  dw_ratio=1, ffn_ratio=4, in_channels=3, num_classes=1000, out_indices=None,
                  use_checkpoint=False,
                  small_kernel_merged=False,
@@ -233,6 +242,8 @@ class RepLKNet(nn.Module):
                  # for RepLKNet-XL on COCO and ADE20K, use an extra BN to normalize the intermediate feature maps then feed them into the heads
                  ):
         super().__init__()
+        # self.forward_features #######
+        #forward_features, (init에 )
 
         if num_classes is None and out_indices is None:
             raise ValueError('must specify one of num_classes (for pretraining) and out_indices (for downstream tasks)')
@@ -279,10 +290,6 @@ class RepLKNet(nn.Module):
             self.norm = get_bn(channels[-1])
             self.avgpool = nn.AdaptiveAvgPool2d(1)
             self.head = nn.Linear(channels[-1], num_classes)
-            self.gap = nn.Sequential(  
-            # nn.ReLU(True),
-            nn.Conv2d(1024,20,kernel_size=1)     ##       
-        )
 
     def forward_features(self, x):
         x = self.stem[0](x)
@@ -310,7 +317,6 @@ class RepLKNet(nn.Module):
                 if stage_idx < self.num_stages - 1:
                     x = self.transitions[stage_idx](x)
             return outs
-        
 
     def forward(self, x, label=None, size=None):
         x = self.forward_features(x)
@@ -318,25 +324,25 @@ class RepLKNet(nn.Module):
             return x
         else:
             x = self.norm(x)
-            x = self.gap(x)
-            logit = self.avgpool(x)
-            # logit = logit.view(logit.size(0), -1)
-            # logit = self.head(logit)
-            logit = logit.view(-1, 20)
-            if label is None:
-                return logit
-            else:
-                cam = self.cam_normalize(x.detach(), size, label)
-                return logit, cam
 
-            # cam = self.cam_normalize(x.detach(), size, label)
+            cam = self.cam_normalize(x.detach(), size, label)
             # print(cam.shape)
             # cv2.imwrite('test.png', cam)
             # print(x.shape)
-            
+            logit = self.avgpool(x)
+            # logit = logit.view(logit.size(0), -1)
+            logit = logit.view(-1,20)
+            print(logit)
+            logit = self.head(logit)
+            print(logit)
             # x = torch.flatten(x, 1)
             # x = self.head(x)
-            # return logit, cam
+            return logit, cam
+        
+    # def fc(self, x):
+    #     x = F.avg_pool2d(x, kernel_size=(x.size(2), x.size(3)), padding=0)
+    #     x = x.view(-1, 20)
+    #     return x
 
     def cam_normalize(self, cam, size, label):
         # cam = nn.ReLU(cam)
@@ -344,17 +350,17 @@ class RepLKNet(nn.Module):
         cam = F.relu(cam)
         cam = F.interpolate(cam, size=(224, 224), mode='bilinear', align_corners=True)
         cam /= F.adaptive_max_pool2d(cam, 1) + 1e-5
-        # print(cam.shape)
+        print(cam.shape)
         # print(cam.shape)
         # label = label.cpu()
         # label = label.view(224, 224, 3).cpu()
         # label *= 255
         # label = np.array(label)
-        # print(label[:,:,None,None].shape)
+        print(label[:,:,None,None].shape)
 
         # cv2.imwrite('test.png',label)
-        cam = cam * label[:, :, None, None]  # clean
-        # print(cam.shape)
+        # cam = cam * label[:, :, None, None]  # clean
+
         return cam
 
     def structural_reparam(self):
@@ -383,31 +389,20 @@ class RepLKNet(nn.Module):
                 fused_conv.bias.data = fused_bias
                 m[0] = fused_conv
                 m[1] = nn.Identity()
-                
-    def get_parameter_groups(self):
-        groups = ([], [], [], [])
-
-        for name, value in self.named_parameters():
-
-            if 'extra' in name:
-                if 'weight' in name:
-                    groups[2].append(value)
-                else:
-                    groups[3].append(value)
-            else:
-                if 'weight' in name:
-                    groups[0].append(value)
-                else:
-                    groups[1].append(value)
-        return groups
 
 
-def create_RepLKNet31B(drop_path_rate=0.3, num_classes=1000, use_checkpoint=True, small_kernel_merged=False):
-    return RepLKNet(large_kernel_sizes=[31, 29, 27, 13], layers=[2, 2, 18, 2], channels=[128, 256, 512, 1024],
+def create_RepLKNet31B(pretrained=True, drop_path_rate=0.3, num_classes=1000, use_checkpoint=True, small_kernel_merged=False):
+    model = RepLKNet(large_kernel_sizes=[31, 29, 27, 13], layers=[2, 2, 18, 2], channels=[128, 256, 512, 1024],
                     drop_path_rate=drop_path_rate, small_kernel=5, num_classes=num_classes,
                     use_checkpoint=use_checkpoint, use_sync_bn=False,
                     small_kernel_merged=small_kernel_merged)
+    if pretrained:
+        model.load_state_dict(torch.load(PATH, map_location="cuda:0"), strict=False)
+        
+        model.to(device)
+        print('model loaded', model)
 
+    return 
 
 def create_RepLKNet31L(drop_path_rate=0.3, num_classes=1000, use_checkpoint=True, small_kernel_merged=False):
     return RepLKNet(large_kernel_sizes=[31, 29, 27, 13], layers=[2, 2, 18, 2], channels=[192, 384, 768, 1536],
@@ -424,8 +419,12 @@ def create_RepLKNetXL(drop_path_rate=0.3, num_classes=1000, use_checkpoint=True,
 
 
 if __name__ == '__main__':
-    model = create_RepLKNet31B(num_classes=20, small_kernel_merged=False).cuda()
-    x = torch.randn(1, 3, 224, 224).cuda()
+    device = torch.device('cuda')
+    model = create_RepLKNet31B(num_classes=1000, small_kernel_merged=False).cuda()
+    # model.load_state_dict
+    print(model)
+    # model = create_RepLKNet31B(num_classes=20, small_kernel_merged=False).cuda()
+    # x = torch.randn(1, 3, 224, 224).cuda()
     # l, c = model(x, label=x, size=(224, 224, 3))
     # logit, cam = model.forward(x)
 
@@ -433,7 +432,7 @@ if __name__ == '__main__':
 
     # dist.init_process_group('gloo', init_method='file:///tmp/somefile', rank=0, world_size=1)
     # dist.init_process_group('gloo', init_method='file:///tmp/somefile', rank=0, world_size=1)
-    summary(model, (3, 224, 224))
+    # summary(model, (3, 224, 224))
 
     # model.eval()
     # print('------------------- training-time model -------------')
