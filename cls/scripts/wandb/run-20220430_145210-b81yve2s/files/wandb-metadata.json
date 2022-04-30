@@ -1,0 +1,24 @@
+{
+    "os": "Linux-5.10.16.3-microsoft-standard-WSL2-x86_64-with-glibc2.29",
+    "python": "3.8.10",
+    "heartbeatAt": "2022-04-30T14:52:15.899371",
+    "startedAt": "2022-04-30T14:52:10.758689",
+    "docker": null,
+    "gpu": "NVIDIA GeForce RTX 3080 Ti",
+    "gpu_count": 1,
+    "cpu_count": 20,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/root/wsss/cls/scripts/origin_train_cls.py",
+    "codePath": "cls/scripts/origin_train_cls.py",
+    "git": {
+        "remote": "https://github.com/herbwood/wsss_baseline2.git",
+        "commit": "da93452a18c7196b9f218ef1503caf4298de884c"
+    },
+    "email": null,
+    "root": "/root/wsss",
+    "host": "4b5d61f74d46",
+    "username": "root",
+    "executable": "/usr/bin/python3"
+}
