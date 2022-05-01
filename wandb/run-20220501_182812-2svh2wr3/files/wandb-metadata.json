@@ -1,0 +1,24 @@
+{
+    "os": "Linux-5.4.0-109-generic-x86_64-with-glibc2.29",
+    "python": "3.8.10",
+    "heartbeatAt": "2022-05-01T09:28:13.450433",
+    "startedAt": "2022-05-01T09:28:12.635949",
+    "docker": null,
+    "gpu": "NVIDIA GeForce RTX 3090",
+    "gpu_count": 4,
+    "cpu_count": 20,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/root/WSSS/cls/scripts/origin_train_cls.py",
+    "codePath": "cls/scripts/origin_train_cls.py",
+    "git": {
+        "remote": "https://github.com/yalu-ku/WSSS",
+        "commit": "f4fbeee42c2e0b25278a096455fc024da5b9c521"
+    },
+    "email": "yalu@korea.ac.kr",
+    "root": "/root/WSSS",
+    "host": "ba1e2769fc19",
+    "username": "root",
+    "executable": "/usr/bin/python3"
+}

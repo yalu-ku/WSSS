@@ -1,5 +1,5 @@
 #!/bin/sh
-EXP_NAME=modified_wsss_1
+EXP_NAME=modified_wsss_2
 
 CUDA_VISIBLE_DEVICES=1 python3 scripts/origin_train_cls.py \
     --img_dir=/root/datasets/VOC2012 \
@@ -9,5 +9,5 @@ CUDA_VISIBLE_DEVICES=1 python3 scripts/origin_train_cls.py \
     --decay_points='5,10' \
     --save_folder=checkpoints/${EXP_NAME} \
     --show_interval=50 \
-    --batch_size 30 \
+    --batch_size 5 \
     --wandb_name=${EXP_NAME}

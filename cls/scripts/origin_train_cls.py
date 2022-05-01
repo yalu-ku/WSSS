@@ -38,8 +38,8 @@ def get_arguments():
     # parser.add_argument("--network", type=str, default='models.vgg', help='wandb name')
 
     parser.add_argument("--img_dir", type=str, default='/root/datasets/VOC2012', help='Directory of training images')
-    parser.add_argument("--train_list", type=str, default='/root/datasets/wsss_baseline2/metadata/voc12/train_aug_cls.txt')
-    parser.add_argument("--test_list", type=str, default='/root/datasets/wsss_baseline2/metadata/voc12/train_cls.txt')
+    parser.add_argument("--train_list", type=str, default='/root/WSSS/metadata/voc12/train_aug_cls.txt')
+    parser.add_argument("--test_list", type=str, default='/root/WSSS/metadata/voc12/train_cls.txt')
     parser.add_argument('--save_folder', default='checkpoints/test', help='Location to save checkpoint models')
 
     parser.add_argument("--batch_size", type=int, default=5)
@@ -65,7 +65,29 @@ def get_arguments():
 
 def get_model():
     model = replk(pretrained=True)
+    model.eval()
     optimizer = create_optimizer(model, skip_list=None)
+    ## freeze 
+    # cnt = 0
+    # for child in model.children():
+    #     cnt += 1
+    #     if cnt < 7:
+    #         for param in child.parameters():
+    #             param.requires_grad = False
+    # print(model.state_dict().keys())    
+    # print(model.fc)
+    # model.fc = nn.Linear(512, 20)
+    for param in model.parameters():
+        param.requires_grad = False
+    
+    for name, param in model.named_parameters():
+        if name in ['head.weight','gap.weight']:
+            param.requires_grad = True
+        
+    # model = torch.nn.DataParallel(model).cuda()
+        # print('name, param:', param)
+    # print(model)
+    
 #     # if 'vgg' in args.network:
 #     #     model = getattr(importlib.import_module(args.network), 'vgg16')(pretrained=True)
 #     # else:
@@ -76,17 +98,17 @@ def get_model():
 
     # model = torch.nn.DataParallel(model).cuda()
 #     model = torch.nn.DataParallel(model)
-#     # param_groups = model.get_parameter_groups()
+    # param_groups = model.get_parameter_groups()
     
-#     optimizer = optim.SGD([
-#         {'params': param_groups[0], 'lr': args.lr},
-#         {'params': param_groups[1], 'lr': 2*args.lr},
-#         {'params': param_groups[2], 'lr': 10*args.lr},
-#         {'params': param_groups[3], 'lr': 20*args.lr}], 
-#         momentum=0.9, 
-#         weight_decay=args.weight_decay, 
-#         nesterov=True
-#     )
+    # optimizer = optim.SGD([
+    #     {'params': param_groups[0], 'lr': args.lr},
+    #     {'params': param_groups[1], 'lr': 2*args.lr},
+    #     {'params': param_groups[2], 'lr': 10*args.lr},
+    #     {'params': param_groups[3], 'lr': 20*args.lr}], 
+    #     momentum=0.9, 
+    #     weight_decay=args.weight_decay, 
+    #     nesterov=True
+    # )
 
     return model, optimizer
 
@@ -223,16 +245,16 @@ def train(current_epoch):
 if __name__ == '__main__':
     args = get_arguments()
     
-    # nGPU = torch.cuda.device_count()
-    # print("start training the classifier, nGPU = %d" % nGPU)
+    nGPU = torch.cuda.device_count()
+    print("start training the classifier, nGPU = %d" % nGPU)
     
-    # args.batch_size *= nGPU
-    # args.num_workers *= nGPU
+    args.batch_size *= nGPU
+    args.num_workers *= nGPU
     
     # print('Running parameters:\n', args)
     
-    # if not os.path.exists(args.save_folder):
-    #     os.makedirs(args.save_folder)
+    if not os.path.exists(args.save_folder):
+        os.makedirs(args.save_folder)
     
     train_loader = train_data_loader(args)
     val_loader = valid_data_loader(args)
@@ -250,8 +272,8 @@ if __name__ == '__main__':
     # print('--------------------------------')
     # print(optimizer)
     # x = torch.randn(2, 3, 384, 384)
-    # # x.to(cuda)
     # out = model(x)
+    # print('output:', out)
     # print('---------------------------------')
     # print(out)
     
@@ -280,18 +302,18 @@ if __name__ == '__main__':
                    'Val Pixel Acc' : val_pixel_acc,   
                 })
 
-        # """ save checkpoint """
-        # if score > best_score:
-        #     best_score = score
-        #     print('\nSaving state, epoch : %d , mIoU : %.4f \n' % (current_epoch, score))
-        #     state = {
-        #         'model': model.state_dict(),
-        #         "optimizer": optimizer.state_dict(),
-        #         'epoch': current_epoch,
-        #         'iter': args.global_counter,
-        #         'miou': score,
-        #     }
-        #     model_file = os.path.join(args.save_folder, 'best.pth')
-        #     torch.save(state, model_file)
-        # else:
-        #     print(f'\nStill best mIoU is {best_score:.4f}\n')
+        """ save checkpoint """
+        if score > best_score:
+            best_score = score
+            print('\nSaving state, epoch : %d , mIoU : %.4f \n' % (current_epoch, score))
+            state = {
+                'model': model.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                'epoch': current_epoch,
+                'iter': args.global_counter,
+                'miou': score,
+            }
+            model_file = os.path.join(args.save_folder, 'best.pth')
+            torch.save(state, model_file)
+        else:
+            print(f'\nStill best mIoU is {best_score:.4f}\n')
