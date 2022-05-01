@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-#import cv2
+import cv2
 import os
 from tqdm import tqdm
 from PIL import Image 
@@ -13,9 +13,9 @@ def load_img_id_list(img_id_file):
     return open(img_id_file).read().splitlines()
 
 
-def load_img_label_list_from_npy(img_name_list, dataset):
-    cls_labels_dict = np.load(f'/home/junehyoung/code/wsss_baseline/voc2012_list/cls_labels.npy', allow_pickle=True).item()
-    return [cls_labels_dict[img_name] for img_name in img_name_list]
+# def load_img_label_list_from_npy(img_name_list, dataset):
+#     cls_labels_dict = np.load(f'/home/junehyoung/code/wsss_baseline/voc2012_list/cls_labels.npy', allow_pickle=True).item()
+#     return [cls_labels_dict[img_name] for img_name in img_name_list]
 
 def output_visualize(image, cam, label, gt_map, pred_map):
     

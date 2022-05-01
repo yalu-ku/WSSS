@@ -359,7 +359,7 @@ def create_RepLKNetXL(drop_path_rate=0.3, num_classes=1000, use_checkpoint=True,
 def replk(pretrained=True, delta=0):
     model = create_RepLKNet31B(num_classes=1000, use_checkpoint=False)
     if pretrained:
-        model.load_state_dict(torch.load('/root/wsss_baseline2/metadata/RepLKNet-31B_ImageNet-22K-to-1K_384.pth'), strict=False)
+        model.load_state_dict(torch.load('/root/WSSS/metadata/RepLKNet-31B_ImageNet-22K-to-1K_384.pth'), strict=False)
         # model.cuda()
     return model
 

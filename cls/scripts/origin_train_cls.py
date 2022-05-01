@@ -53,7 +53,7 @@ def get_arguments():
     parser.add_argument("--weight_decay", type=float, default=0.0005)
     parser.add_argument("--decay_points", type=str, default='5,10')
     parser.add_argument("--epoch", type=int, default=15)
-    parser.add_argument("--num_workers", type=int, default=2)
+    parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--alpha", type=float, default=0.20, help='object cues for the pseudo seg map generation')
 
     parser.add_argument('--show_interval', default=50, type=int, help='interval of showing training conditions')
@@ -74,7 +74,7 @@ def get_model():
 #     model = replk(pretrained=True)
 #     # model = resnet50(pretrained=True)
 
-#     # model = torch.nn.DataParallel(model).cuda()
+    # model = torch.nn.DataParallel(model).cuda()
 #     model = torch.nn.DataParallel(model)
 #     # param_groups = model.get_parameter_groups()
     
@@ -109,7 +109,7 @@ def validate(current_epoch):
             label = label.to('cuda', non_blocking=True)
             img = img.to('cuda', non_blocking=True)
             
-            logit, cam = model(img, label)
+            logit, cam = model(img, label,size=(H,W))
 
             """ classification loss """
             loss = F.multilabel_soft_margin_loss(logit, label)
@@ -185,8 +185,8 @@ def train(current_epoch):
     for idx, dat in enumerate(train_loader):
 
         img, label, _ = dat
-        label = label# .to('cuda', non_blocking=True)
-        img = img# .to('cuda', non_blocking=True)
+        label = label.to('cuda', non_blocking=True)
+        img = img.to('cuda', non_blocking=True)
 
         logit = model(img)
         """ classification loss """
@@ -244,7 +244,7 @@ if __name__ == '__main__':
     # model = replk(pretrained=True)
     # optimizer = create_optimizer(model, skip_list=None)
     model, optimizer = get_model()
-    
+    model.cuda()
     
     # print(model)
     # print('--------------------------------')
@@ -280,18 +280,18 @@ if __name__ == '__main__':
                    'Val Pixel Acc' : val_pixel_acc,   
                 })
 
-        """ save checkpoint """
-        if score > best_score:
-            best_score = score
-            print('\nSaving state, epoch : %d , mIoU : %.4f \n' % (current_epoch, score))
-            state = {
-                'model': model.module.state_dict(),
-                "optimizer": optimizer.state_dict(),
-                'epoch': current_epoch,
-                'iter': args.global_counter,
-                'miou': score,
-            }
-            model_file = os.path.join(args.save_folder, 'best.pth')
-            torch.save(state, model_file)
-        else:
-            print(f'\nStill best mIoU is {best_score:.4f}\n')
+        # """ save checkpoint """
+        # if score > best_score:
+        #     best_score = score
+        #     print('\nSaving state, epoch : %d , mIoU : %.4f \n' % (current_epoch, score))
+        #     state = {
+        #         'model': model.state_dict(),
+        #         "optimizer": optimizer.state_dict(),
+        #         'epoch': current_epoch,
+        #         'iter': args.global_counter,
+        #         'miou': score,
+        #     }
+        #     model_file = os.path.join(args.save_folder, 'best.pth')
+        #     torch.save(state, model_file)
+        # else:
+        #     print(f'\nStill best mIoU is {best_score:.4f}\n')

@@ -26,7 +26,7 @@ import utils_RepLK # RepLKNet에서 가져온 .py
 ## ImageNet-1k pretrained model (384x384, acc:84.8) 아니고 파일명 참고
 # model_url = {'RepLKNet31B': 'https://pan.baidu.com/s/1WhLaCKKv4NuKc3qMYECOIQ?pwd=lknt'}
 
-PATH = '/root/wsss_baseline2/metadata/RepLKNet-31B_ImageNet-22K-to-1K_384.pth'
+PATH = '/root/WSSS/metadata/RepLKNet-31B_ImageNet-22K-to-1K_384.pth'
 
 
 
