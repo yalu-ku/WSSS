@@ -11,23 +11,25 @@ import torch.nn.functional as F
 
 # from models.vgg_refine import vgg16
 #from models.vgg import vgg16
-from models.vgg_deform_scaling_learnable import vgg16
+# from models.vgg_deform_scaling_learnable import vgg16
 # from models.vgg_deform import vgg16
 from utils.Metrics import IOUMetric
 from utils.LoadData import test_data_loader
 from utils.decode import get_palette
+# from models.origin_replk import replk 
+from models.origin_vgg import vgg16
 
 parser = argparse.ArgumentParser(description='DRS pytorch implementation')
 parser.add_argument("--input_size", type=int, default=320)
 parser.add_argument("--crop_size", type=int, default=320)
-parser.add_argument("--img_dir", type=str, default="/data/DB/VOC2012/")
-parser.add_argument("--test_list", type=str, default='/home/junehyoung/code/wsss_baseline/metadata/voc12/train_aug_cls.txt')
+parser.add_argument("--img_dir", type=str, default="/root/datasets/VOC2012")
+parser.add_argument("--test_list", type=str, default='/root/WSSS/metadata/voc12/train_aug_cls.txt')
 parser.add_argument("--batch_size", type=int, default=1)
 parser.add_argument("--num_classes", type=int, default=20)
 parser.add_argument("--num_workers", type=int, default=2)
 parser.add_argument("--checkpoint", type=str)
 parser.add_argument("--alpha", type=float, default=0.20)
-parser.add_argument('--refine_dir', type=str, default='')
+parser.add_argument('--refine_dir', type=str)
 
 args = parser.parse_args()
 print(args)

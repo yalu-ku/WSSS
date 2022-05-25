@@ -1,0 +1,91 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.12.15
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.8.10
+    start_time: 1651429258
+    t:
+      1:
+      - 1
+      - 5
+      - 41
+      - 53
+      - 55
+      2:
+      - 1
+      - 5
+      - 41
+      - 53
+      - 55
+      3:
+      - 1
+      - 17
+      4: 3.8.10
+      5: 0.12.15
+      8:
+      - 5
+alpha:
+  desc: null
+  value: 0.2
+batch_size:
+  desc: null
+  value: 30
+crop_size:
+  desc: null
+  value: 320
+custom_vis:
+  desc: null
+  value: false
+decay_points:
+  desc: null
+  value: 5,10
+epoch:
+  desc: null
+  value: 15
+global_counter:
+  desc: null
+  value: 0
+img_dir:
+  desc: null
+  value: /root/datasets/VOC2012
+input_size:
+  desc: null
+  value: 384
+lr:
+  desc: null
+  value: 0.001
+num_classes:
+  desc: null
+  value: 20
+num_workers:
+  desc: null
+  value: 4
+save_folder:
+  desc: null
+  value: checkpoints/31L_22k-to-1k_384
+save_interval:
+  desc: null
+  value: 5
+show_interval:
+  desc: null
+  value: 50
+shuffle_val:
+  desc: null
+  value: true
+test_list:
+  desc: null
+  value: /root/WSSS/metadata/voc12/train_cls.txt
+train_list:
+  desc: null
+  value: /root/WSSS/metadata/voc12/train_aug_cls.txt
+wandb_name:
+  desc: null
+  value: ''
+weight_decay:
+  desc: null
+  value: 0.0005

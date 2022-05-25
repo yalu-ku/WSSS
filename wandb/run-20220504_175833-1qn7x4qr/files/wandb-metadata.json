@@ -1,0 +1,24 @@
+{
+    "os": "Linux-5.4.0-109-generic-x86_64-with-glibc2.29",
+    "python": "3.8.10",
+    "heartbeatAt": "2022-05-04T08:58:34.193944",
+    "startedAt": "2022-05-04T08:58:33.288672",
+    "docker": null,
+    "gpu": "NVIDIA GeForce RTX 3090",
+    "gpu_count": 4,
+    "cpu_count": 20,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/root/WSSS/cls/scripts/train_refine_replk.py",
+    "codePath": "cls/scripts/train_refine_replk.py",
+    "git": {
+        "remote": "https://github.com/yalu-ku/WSSS",
+        "commit": "6cb62986cd3664b75e20f170f22e38cfd9e0abdb"
+    },
+    "email": "yalu@korea.ac.kr",
+    "root": "/root/WSSS",
+    "host": "ba1e2769fc19",
+    "username": "root",
+    "executable": "/usr/bin/python3"
+}

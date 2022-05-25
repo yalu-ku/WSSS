@@ -127,7 +127,7 @@ cfg = {
 
 
 def vgg16(pretrained=True, delta=0):
-    # model = VGG(make_layers(cfg['D1']))
+    model = VGG(make_layers(cfg['D1']))
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['vgg16']), strict=False)
         

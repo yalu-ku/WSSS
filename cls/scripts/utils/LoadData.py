@@ -113,6 +113,7 @@ class VOCDataset(Dataset):
     
     def read_labeled_image_list(self, data_dir, data_list):
         img_dir = os.path.join(data_dir, "JPEGImages")
+        # img_dir = '/home/aro/WSSS_container/datasets/JPEGImages'
         gt_map_dir = os.path.join(data_dir, "SegmentationClassAug")
         sal_map_dir = os.path.join(data_dir, "saliency_map")
         

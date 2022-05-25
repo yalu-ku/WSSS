@@ -1,3 +1,5 @@
+## DRS에서 localization map -> RepLK에서 seg map으로 작용
+
 import sys
 import os
 sys.path.append(os.getcwd())
@@ -11,18 +13,19 @@ import torch.nn.functional as F
 # from models.vgg_drs import vgg16
 from models.vgg_deform_scaling_learnable import vgg16
 from utils.LoadData import test_data_loader
+from models.origin_replk import replk
 
 def get_arguments():
     parser = argparse.ArgumentParser(description='DRS pytorch implementation')
     parser.add_argument("--input_size", type=int, default=320)
     parser.add_argument("--crop_size", type=int, default=320)
-    parser.add_argument("--img_dir", type=str, default="/data/DB/VOC2012/")
-    parser.add_argument("--test_list", type=str, default='/home/junehyoung/code/wsss_baseline2/metadata/voc12/train_aug_cls.txt')
+    parser.add_argument("--img_dir", type=str, default="/root/datasets/VOC2012")
+    parser.add_argument("--test_list", type=str, default='/root/WSSS/metadata/voc12/train_aug_cls.txt')
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--num_classes", type=int, default=20)
     parser.add_argument("--num_workers", type=int, default=2)
-    parser.add_argument("--checkpoint", type=str)
-    parser.add_argument("--locmap_dir", type=str)
+    parser.add_argument("--checkpoint", type=str, default='/root/WSSS/checkpoints/XL_Meg73M_ImageNet1K/best.pth')
+    parser.add_argument("--locmap_dir", type=str, default='localization_map')
 
     args = parser.parse_args()
     print(args)
@@ -31,11 +34,12 @@ def get_arguments():
 
 def main(args):
     output_dir = os.path.join(args.img_dir, args.locmap_dir)
+    # print(output_dir)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     """ model load """
-    model = vgg16(pretrained=True)
+    model = replk(pretrained=True)
     model = model.cuda()
     model.eval()
         

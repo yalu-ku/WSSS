@@ -255,9 +255,11 @@ class RepLKNet(nn.Module):
             self.norm = get_bn(channels[-1])
             self.avgpool = nn.AdaptiveAvgPool2d(1)
             self.head = nn.Linear(channels[-1], num_classes)
-            self.gap = nn.Conv2d(1024,20,kernel_size=1)
+            # self.gap = nn.Conv2d(1024,20,kernel_size=1) ## 31B
+            # self.gap = nn.Conv2d(1536,20,kernel_size=1) ## 31L
+            self.gap = nn.Conv2d(channels[-1],20,kernel_size=1) ## XL conv2d
 
-    def fc(self, x):
+    def fc(self, x): ## GAP
         x = F.avg_pool2d(x, kernel_size=(x.size(2), x.size(3)), padding=0)
         x = x.view(-1, 20)
         return x
@@ -356,10 +358,32 @@ def create_RepLKNetXL(drop_path_rate=0.3, num_classes=1000, use_checkpoint=True,
                     num_classes=num_classes, use_checkpoint=use_checkpoint,
                     small_kernel_merged=small_kernel_merged)
     
-def replk(pretrained=True, delta=0.55):
-    model = create_RepLKNet31B(num_classes=1000, use_checkpoint=False)
-    if pretrained:
-        model.load_state_dict(torch.load('/root/WSSS/metadata/RepLKNet-31B_ImageNet-22K-to-1K_384.pth'), strict=False)
+def replk(pretrained=False, delta=0.55):
+    if not pretrained:
+        print('please check --pt_model argument. usage: --pt_model /root/WSSS/metadata/RepLKNet-31B_ImageNet-1K_384.pth')
+        exit(-1)
+        model = create_RepLKNetXL(num_classes=1000, use_checkpoint=False) ## XL 1K
+    else:
+        model_name = pretrained.split('/')[-1]
+        # print(model_name)
+        model_detail = model_name.split('_')[0]
+        
+        print(f'Pretrained model is "{model_name}"')
+        if '31B' in model_detail:
+            model = create_RepLKNet31B(num_classes=1000, use_checkpoint=False)
+        elif '31L' in model_detail:
+            model = create_RepLKNet31L(num_classes=1000, use_checkpoint=False)
+        elif 'XL' in model_detail:
+            model = create_RepLKNetXL(num_classes=1000, use_checkpoint=False)
+        model.load_state_dict(torch.load(pretrained), strict=False)
+            
+    # model = create_RepLKNet31L(num_classes=1000, use_checkpoint=False) ## B->L, clsses 1000 -> 21~
+    # model = create_RepLKNetXL(num_classes=2048, use_checkpoint=False) ## XL pt
+    
+    
+    # if pretrained:
+        # model.load_state_dict(torch.load('/root/WSSS/metadata/RepLKNet-31B_ImageNet-1K_384.pth'), strict=False)
+        # model.load_state_dict(torch.load('/root/WSSS/metadata/RepLKNet-XL_MegData73M_ImageNet1K.pth'), strict=False)
         # model.cuda()
     return model
 

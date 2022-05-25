@@ -40,9 +40,9 @@ def get_arguments():
     parser.add_argument("--img_dir", type=str, default='/root/datasets/VOC2012', help='Directory of training images')
     parser.add_argument("--train_list", type=str, default='/root/WSSS/metadata/voc12/train_aug_cls.txt')
     parser.add_argument("--test_list", type=str, default='/root/WSSS/metadata/voc12/train_cls.txt')
-    parser.add_argument('--save_folder', default='checkpoints/test', help='Location to save checkpoint models')
+    parser.add_argument('--save_folder', default='checkpoints/XL_Meg73M_ImageNet1K', help='Location to save checkpoint models')
 
-    parser.add_argument("--batch_size", type=int, default=5)
+    parser.add_argument("--batch_size", type=int, default=30)
     parser.add_argument("--input_size", type=int, default=384)
     parser.add_argument("--crop_size", type=int, default=320)
     parser.add_argument("--num_classes", type=int, default=20)
@@ -245,11 +245,11 @@ def train(current_epoch):
 if __name__ == '__main__':
     args = get_arguments()
     
-    nGPU = torch.cuda.device_count()
-    print("start training the classifier, nGPU = %d" % nGPU)
+    # nGPU = torch.cuda.device_count()
+    # print("start training the classifier, nGPU = %d" % nGPU)
     
-    args.batch_size *= nGPU
-    args.num_workers *= nGPU
+    # args.batch_size *= nGPU
+    # args.num_workers *= nGPU
     
     # print('Running parameters:\n', args)
     
@@ -279,7 +279,7 @@ if __name__ == '__main__':
     
     # wandb 
     wandb.init()
-    wandb.run.name = args.wandb_name 
+    wandb.run.name = args.save_folder.split('/')[-1]
     wandb.config.update(args)
     wandb.watch(model)
 
@@ -317,3 +317,12 @@ if __name__ == '__main__':
             torch.save(state, model_file)
         else:
             print(f'\nStill best mIoU is {best_score:.4f}\n')
+    
+    final_state = {
+                'model': model.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                'epoch': current_epoch,
+                'iter': args.global_counter,
+                'miou': score,
+            }     
+    torch.save(final_state, os.path.join(args.save_folder, 'final.pth'))
