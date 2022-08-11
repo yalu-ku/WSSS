@@ -352,16 +352,22 @@ def create_RepLKNet31L(drop_path_rate=0.3, num_classes=1000, use_checkpoint=True
                     drop_path_rate=drop_path_rate, small_kernel=5, num_classes=num_classes, use_checkpoint=use_checkpoint,
                     small_kernel_merged=small_kernel_merged)
 
+# def create_RepLKNetXL(drop_path_rate=0.3, num_classes=1000, use_checkpoint=True, small_kernel_merged=False):
+#     return RepLKNet(large_kernel_sizes=[27,27,27,13], layers=[2,2,18,2], channels=[256,512,1024,2048],
+#                     drop_path_rate=drop_path_rate, small_kernel=None, dw_ratio=1.5,
+#                     num_classes=num_classes, use_checkpoint=use_checkpoint,
+#                     small_kernel_merged=small_kernel_merged)
+                    
 def create_RepLKNetXL(drop_path_rate=0.3, num_classes=1000, use_checkpoint=True, small_kernel_merged=False):
-    return RepLKNet(large_kernel_sizes=[27,27,27,13], layers=[2,2,18,2], channels=[256,512,1024,2048],
+    return RepLKNet(large_kernel_sizes=[9,9,9,13], layers=[2,2,18,2], channels=[256,512,1024,2048],
                     drop_path_rate=drop_path_rate, small_kernel=None, dw_ratio=1.5,
                     num_classes=num_classes, use_checkpoint=use_checkpoint,
                     small_kernel_merged=small_kernel_merged)
     
 def replk(pretrained=False, delta=0.55):
     if not pretrained:
-        print('please check --pt_model argument. usage: --pt_model /root/WSSS/metadata/RepLKNet-31B_ImageNet-1K_384.pth')
-        exit(-1)
+        # print('please check --pt_model argument. usage: --pt_model /root/WSSS/metadata/RepLKNet-31B_ImageNet-1K_384.pth')
+        # exit(-1)
         model = create_RepLKNetXL(num_classes=1000, use_checkpoint=False) ## XL 1K
     else:
         model_name = pretrained.split('/')[-1]

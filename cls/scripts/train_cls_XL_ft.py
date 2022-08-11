@@ -49,7 +49,7 @@ def get_arguments():
     parser.add_argument("--shuffle_val", action='store_false')
     parser.add_argument("--custom_vis", action='store_true')
 
-    parser.add_argument("--lr", type=float, default=0.001)
+    parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--weight_decay", type=float, default=0.0005)
     parser.add_argument("--decay_points", type=str, default='5,10')
     parser.add_argument("--epoch", type=int, default=15)
@@ -65,7 +65,8 @@ def get_arguments():
     # model list | RepLKNet-31B_ImageNet-1K_384.pth | RepLKNet-31B_ImageNet-22K-to-1K_384.pth | RepLKNet-31L_ImageNet-22K-to-1K_384.pth    #
     #            | RepLKNet-31L_ImageNet-22K.pth    | RepLKNet-XL_MegData73M_ImageNet1K.pth   | RepLKNet-XL_MegData73M_pretrain.pth        #
     ########################################################################################################################################
-    parser.add_argument("--pt_model", type=str, default='/root/WSSS/metadata/RepLKNet-31L_ImageNet-22K-to-1K_384.pth')
+    # parser.add_argument("--pt_model", type=str, default='/root/WSSS/metadata/RepLKNet-31L_ImageNet-22K-to-1K_384.pth')
+    parser.add_argument("--pt_model", type=str, default='')
     ########################################################################################################################################
 
     return parser.parse_args()
